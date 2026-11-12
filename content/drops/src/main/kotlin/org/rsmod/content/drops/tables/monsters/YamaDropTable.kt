@@ -15,7 +15,7 @@ import org.rsmod.game.entity.Player
 @JvmField
 public val yamaDropTable: RSDropTable<Player, DropRollItem> = RSDropTable(
     tableIdentifier = "Yama Drops",
-    npcs = npcs("npc.yama_throne_occupied", "npc.yama_throne_unoccupied"),
+    npcs = npcs("npc.yama", "npc.yama_throne_occupied", "npc.yama_throne_unoccupied"),
     guaranteed = rsPlayerGuaranteedTable {
         "obj.cosmic_soul_catalyst" count 2000
         "obj.diabolic_worms" count 250
