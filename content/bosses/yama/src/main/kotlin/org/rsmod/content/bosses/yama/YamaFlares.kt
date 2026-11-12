@@ -3,8 +3,8 @@ package org.rsmod.content.bosses.yama
 import dev.openrune.ServerCacheManager
 import dev.openrune.rscm.RSCM.asRSCM
 import dev.openrune.rscm.RSCMType
-import org.rsmod.api.npc.heal
 import org.rsmod.api.npc.events.NpcHitEvents
+import org.rsmod.api.npc.heal
 import org.rsmod.api.player.output.spotanimSpecific
 import org.rsmod.api.script.onModifyNpcHit
 import org.rsmod.game.entity.Npc

@@ -1,13 +1,13 @@
 package org.rsmod.content.bosses.yama
 
-import org.rsmod.api.bosses.runtime.bossProjectile
-import org.rsmod.api.player.stat.hitpoints
-import org.rsmod.api.player.output.mes
-import org.rsmod.api.player.output.spotanimSpecific
-import org.rsmod.game.hit.HitType
-import org.rsmod.map.CoordGrid
 import dev.openrune.rscm.RSCM.asRSCM
 import dev.openrune.rscm.RSCMType
+import org.rsmod.api.bosses.runtime.bossProjectile
+import org.rsmod.api.player.output.mes
+import org.rsmod.api.player.output.spotanimSpecific
+import org.rsmod.api.player.stat.hitpoints
+import org.rsmod.game.hit.HitType
+import org.rsmod.map.CoordGrid
 
 /**
  * Yama's attacks in phases 1 and 2 (Attacks.Yama.js): the rotation, the standard attacks and the
