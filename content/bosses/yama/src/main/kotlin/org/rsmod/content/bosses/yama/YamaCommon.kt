@@ -23,6 +23,9 @@ internal object YamaCommon {
     val ARRIVAL_FACE = CoordGrid(1503, 10052, 0)
     val THRONE_TILE = CoordGrid(1500, 10089, 0)
     val VOICE_RESPAWN = CoordGrid(1439, 10076, 0)
+
+    /** Next to the Voice, who the map data stands on plane 1. */
+    val VOICE_LEDGE = CoordGrid(1439, 10077, 1)
     val YAMA_TILE = CoordGrid(1501, 10076, 0)
     val ARENA_CENTRE = CoordGrid(1503, 10078, 0)
     val LOOT_TILE = CoordGrid(1503, 10088, 0)
@@ -112,6 +115,7 @@ private val CONTRACT_OFFERED = AttributeKey<Boolean>(persistenceKey = "yama_cont
 private val CONTRACT_SIGNED = AttributeKey<Boolean>(persistenceKey = "yama_contract_signed")
 private val LAST_RESULT = AttributeKey<Int>(persistenceKey = "yama_last_result")
 private val BEST_TICKS = AttributeKey<Int>(persistenceKey = "yama_best_ticks")
+private val QUEST_BYPASS = AttributeKey<Boolean>(persistenceKey = "yama_quest_bypass")
 
 internal var Player.voiceProgress by intVarBit(YamaIds.VB_VOICE_PROGRESS)
 internal var Player.yamaKills by intVarp(YamaIds.VP_KILLS)
@@ -139,6 +143,13 @@ internal var Player.lastYamaResult: YamaResult
     get() = YamaResult.entries.getOrElse(attr[LAST_RESULT] ?: 0) { YamaResult.NONE }
     set(value) {
         attr[LAST_RESULT] = value.ordinal
+    }
+
+/** Set by ::yamato so the Voice lets a tester in while A Kingdom Divided is not implemented. */
+internal var Player.yamaQuestBypass: Boolean
+    get() = attr[QUEST_BYPASS] ?: false
+    set(value) {
+        attr[QUEST_BYPASS] = value
     }
 
 internal var Player.yamaBestTicks: Int

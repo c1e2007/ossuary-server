@@ -108,7 +108,7 @@ internal class YamaVoice @Inject constructor(private val gate: YamaEntryGate) : 
     }
 
     private fun canEnter(player: org.rsmod.game.entity.Player): Boolean =
-        QuestRequirements.hasCompleted(player, REQUIRED_QUEST)
+        player.yamaQuestBypass || QuestRequirements.hasCompleted(player, REQUIRED_QUEST)
 
     private companion object {
         private val VOICES =
