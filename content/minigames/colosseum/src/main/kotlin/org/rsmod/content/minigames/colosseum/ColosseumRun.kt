@@ -4,6 +4,7 @@ import kotlin.random.Random
 import org.rsmod.api.instances.InstanceSession
 import org.rsmod.game.entity.Npc
 import org.rsmod.game.entity.Player
+import org.rsmod.game.loc.LocInfo
 import org.rsmod.map.CoordGrid
 
 internal enum class RunStage {
@@ -37,6 +38,12 @@ internal class ColosseumRun(
     var glory: Int = 0
     var ticking: Boolean = false
     var startingIn: Int = 0
+    var fight: SolFight? = null
+    var doomStacks: Int = 0
+    val sand: MutableMap<ArenaTile, LocInfo> = linkedMapOf()
+    val barricade: MutableList<LocInfo> = mutableListOf()
+    val hazards: MutableSet<Npc> = linkedSetOf()
+    val cleanup: MutableList<() -> Unit> = mutableListOf()
 
     fun tile(x: Int, z: Int): CoordGrid =
         CoordGrid(

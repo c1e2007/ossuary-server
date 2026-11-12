@@ -22,7 +22,9 @@ import org.rsmod.game.entity.Player
 import org.rsmod.plugin.scripts.PluginScript
 import org.rsmod.plugin.scripts.ScriptContext
 
-internal class ColosseumScript @Inject constructor(private val runs: ColosseumRuns) : PluginScript() {
+internal class ColosseumScript
+@Inject
+constructor(private val runs: ColosseumRuns, private val sol: ColosseumSol) : PluginScript() {
     override fun ScriptContext.startup() {
         onOpLoc1("loc.colosseum_entrance_outside") { goDown() }
         onOpLoc1("loc.colosseum_exit_lobby") { goUp() }
@@ -217,7 +219,7 @@ internal class ColosseumScript @Inject constructor(private val runs: ColosseumRu
         player.colosseumWaveDamage = 0
         player.mes("<col=ef1020>Wave: $wave</col>")
         if (wave == Colosseum.FINAL_WAVE) {
-            player.mes("Sol Heredit stirs in his seat.")
+            sol.begin(run)
             return
         }
         val types = ColosseumWaves.startingNpcs(wave, run.modifiers, run.random)
@@ -234,6 +236,11 @@ internal class ColosseumScript @Inject constructor(private val runs: ColosseumRu
 
     private fun waveTick(run: ColosseumRun) {
         run.waveTicks++
+        if (run.fight != null) {
+            sol.tick(run)
+            sol.tendSand(run)
+            return
+        }
         run.npcs.removeAll { it.hitpoints <= 0 || !it.isSlotAssigned }
         if (run.npcs.isEmpty()) {
             completeWave(run)
@@ -251,6 +258,7 @@ internal class ColosseumScript @Inject constructor(private val runs: ColosseumRu
     private fun completeWave(run: ColosseumRun) {
         run.wave++
         run.totalTicks += run.waveTicks
+        ColosseumEffects.waveCompleted(run)
         run.stage = RunStage.INTERMISSION
         run.player.colosseumWavesCompleted = run.player.colosseumWavesCompleted + 1
         run.player.mes(

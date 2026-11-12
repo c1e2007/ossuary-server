@@ -81,6 +81,10 @@ constructor(
         if (run.stage == RunStage.ENDED) return
         run.stage = RunStage.ENDED
         active.remove(run.session.id)
+        run.cleanup.forEach { it() }
+        run.cleanup.clear()
+        for (hazard in run.hazards.toList()) npcRepo.del(hazard, 0)
+        run.hazards.clear()
         for (npc in run.npcs.toList()) npcRepo.del(npc, 0)
         run.npcs.clear()
         run.minimus?.let { npcRepo.del(it, 0) }
