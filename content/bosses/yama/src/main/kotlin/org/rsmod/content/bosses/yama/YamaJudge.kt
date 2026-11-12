@@ -53,6 +53,7 @@ internal object YamaJudge {
         var platformTicks = -1
         var onPlatform = false
         var jumpQueued = false
+        var yamaHitpoints = 0
         var prayers = "meleeRanged"
         val surges = ArrayList<Surge>()
     }
@@ -67,6 +68,7 @@ internal object YamaJudge {
     private const val ICON_RANGED_MAGIC = 6
 
     private const val FALL_TICKS = 2
+    private const val YAMA_GONE_TICKS = 3
     private const val FADE_TICKS = 4
     private const val LAND_TICKS = 6
     private const val RETURN_TICKS = 5
@@ -94,7 +96,15 @@ internal object YamaJudge {
         yama.spotanim(YamaIds.SPOT_TRANSITION)
         YamaFlares.clear(fight)
         YamaHazards.clear(fight)
-        fight.judge = State()
+        val state = State()
+        state.yamaHitpoints = yama.hitpoints
+        fight.judge = state
+        // He sinks with the slam and stays gone until the Judge is dead, as the reference's moveTo
+        // back to the centre implies, rather than popping back up before the player lands.
+        fight.at(YAMA_GONE_TICKS) {
+            fight.remove(fight.yama)
+            fight.yama = null
+        }
         fight.at(FALL_TICKS) {
             YamaGlyphs.putAllOut(fight)
             fall(fight, LAND_TICKS - FALL_TICKS) {
@@ -168,6 +178,8 @@ internal object YamaJudge {
         for (x in SURGE_COLUMNS.shuffled().take(2)) {
             val npc = fight.spawn(YamaIds.FIRE_SURGE, fight.arena.tile(x, SURGE_START_Z)) ?: continue
             npc.hitpoints = SURGE_HITPOINTS
+            // A fire spell is put out by a spell; it has no Attack option.
+            npc.hideAllOps()
             state.surges += Surge(npc, x, SURGE_START_Z)
         }
     }
@@ -310,7 +322,6 @@ internal object YamaJudge {
             return
         }
         state.jumpQueued = true
-        delay(1)
         anim(YamaIds.SEQ_JUMP)
         exactMove(coords, stone.coords, delay1 = 0, delay2 = JUMP_CYCLES, dir = JUMP_FACING)
         delay(1)
@@ -334,9 +345,7 @@ internal object YamaJudge {
         fight.at(RETURN_TICKS) {
             player.yamaTransitionDamage = 0
             player.yamaTransitionPhase = 0
-            fight.yama?.let {
-                PathingEntityCommon.teleport(it, fight.deps.collision, fight.arena.tile(YAMA_RETURN))
-            }
+            fight.respawnYama(YAMA_RETURN, state.yamaHitpoints)
         }
         fight.at(RETURN_TICKS + 1) {
             fall(fight, 3) {
