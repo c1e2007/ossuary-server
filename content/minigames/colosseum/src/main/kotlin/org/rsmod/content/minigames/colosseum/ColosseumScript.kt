@@ -65,6 +65,7 @@ constructor(
         val type = ServerCacheManager.getNpc(ColosseumNpcs.MINIMUS_LOBBY.asRSCM(RSCMType.NPC)) ?: return
         val npc = Npc(type, Colosseum.LOBBY_MINIMUS)
         npcRepo.add(npc, Int.MAX_VALUE)
+        runs.pin(npc)
         npc.faceDirection(Direction.South)
     }
 
@@ -134,9 +135,10 @@ constructor(
     private fun ProtectedAccess.begin(run: ColosseumRun) {
         resetVars(player)
         rewards.start(run)
-        val minimus = runs.spawn(run, ColosseumNpcs.MINIMUS_ARENA, run.tile(Colosseum.MINIMUS_START))
+        val minimus =
+            runs.spawn(run, ColosseumNpcs.MINIMUS_ARENA, run.tile(Colosseum.MINIMUS_START), pinned = true)
         run.minimus = minimus
-        run.sol = runs.spawn(run, ColosseumNpcs.SOL_SEATED, run.tile(Colosseum.SOL_SEAT))
+        run.sol = runs.spawn(run, ColosseumNpcs.SOL_SEATED, run.tile(Colosseum.SOL_SEAT), pinned = true)
         minimus?.say("A ${player.colosseumRank} approaches!")
         runs.tickLoop(run) { tick(it) }
     }
@@ -288,6 +290,9 @@ constructor(
         val fallen = run.npcs.filter { it.hitpoints <= 0 || !it.isSlotAssigned }
         run.npcs.removeAll(fallen.toSet())
         for (npc in fallen) hazards.enemyDied(run, npc)
+        for (npc in run.npcs) {
+            if (runs.needsTarget(run, npc)) runs.engage(run, npc)
+        }
         hazards.tick(run)
         sol.tendSand(run)
         if (run.npcs.isEmpty()) {
@@ -315,7 +320,7 @@ constructor(
             "Wave ${run.wave} completed! Duration: <col=ef1020>${run.secondsString(run.waveTicks)}</col>"
         )
         val tile = run.player.coords.translate(0, 1)
-        run.minimus = runs.spawn(run, ColosseumNpcs.MINIMUS_ARENA, tile)
+        run.minimus = runs.spawn(run, ColosseumNpcs.MINIMUS_ARENA, tile, pinned = true)
     }
 
     private companion object {

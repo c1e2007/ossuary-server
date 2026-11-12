@@ -3,6 +3,8 @@ package org.rsmod.content.minigames.colosseum
 import dev.openrune.ServerCacheManager
 import dev.openrune.rscm.RSCM.asRSCM
 import dev.openrune.rscm.RSCMType
+import dev.openrune.types.MoveRestrict
+import dev.openrune.types.NpcMode
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.rsmod.api.bosses.runtime.BossDeps
@@ -19,12 +21,14 @@ import org.rsmod.api.instances.withInstanceLeaveTransition
 import org.rsmod.api.npc.apPlayer2
 import org.rsmod.api.npc.interact.AiPlayerInteractions
 import org.rsmod.api.player.hook.TeleportType
+import org.rsmod.api.player.isValidTarget
 import org.rsmod.api.player.protect.ProtectedAccess
 import org.rsmod.api.registry.region.RegionRegistry
 import org.rsmod.api.repo.npc.NpcRepository
 import org.rsmod.game.MapClock
 import org.rsmod.game.entity.Npc
 import org.rsmod.game.entity.Player
+import org.rsmod.game.interact.InteractionPlayer
 import org.rsmod.map.CoordGrid
 
 @Singleton
@@ -92,20 +96,39 @@ constructor(
         run.player.colosseumSelected = 0
     }
 
-    fun spawn(run: ColosseumRun, type: String, tile: CoordGrid): Npc? {
+    fun spawn(run: ColosseumRun, type: String, tile: CoordGrid, pinned: Boolean = false): Npc? {
         val npcType = ServerCacheManager.getNpc(type.asRSCM(RSCMType.NPC)) ?: return null
         val npc = Npc(npcType, tile)
         npcRepo.add(npc, Int.MAX_VALUE)
+        // add() treats Int.MAX_VALUE as a permanent spawn and turns respawning on; arena npcs
+        // must stay dead once killed.
+        npc.respawns = false
         manager.attachNpc(run.session.id, npc)
+        if (pinned) pin(npc)
         return npc
+    }
+
+    /** Runtime equivalent of the `moveRestrict = "NoMove"` cache config that ToA's static npcs use. */
+    fun pin(npc: Npc) {
+        npc.moveRestrict = MoveRestrict.NoMove
     }
 
     fun remove(npc: Npc) {
         npcRepo.del(npc, 0)
     }
 
+    /**
+     * Makes [npc] attack the run's player. The boss DSL runs a combat tick from the npc's ap-player2
+     * trigger, so this is the call that produces a real attack.
+     */
     fun engage(run: ColosseumRun, npc: Npc) {
         npc.apPlayer2(run.player, aiInteractions)
+    }
+
+    /** True when [npc] has lost its target, so it must be re-engaged. */
+    fun needsTarget(run: ColosseumRun, npc: Npc): Boolean {
+        val target = (npc.interaction as? InteractionPlayer)?.target
+        return npc.mode != NpcMode.ApPlayer2 || target !== run.player || !run.player.isValidTarget()
     }
 
     fun tickLoop(run: ColosseumRun, onTick: (ColosseumRun) -> Unit) {
