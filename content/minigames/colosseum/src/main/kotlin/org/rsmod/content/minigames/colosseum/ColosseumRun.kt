@@ -39,6 +39,8 @@ internal class ColosseumRun(
     var ticking: Boolean = false
     var startingIn: Int = 0
     var fight: SolFight? = null
+    var loot: RunLoot? = null
+    var chest: LocInfo? = null
     var doomStacks: Int = 0
     val sand: MutableMap<ArenaTile, LocInfo> = linkedMapOf()
     val barricade: MutableList<LocInfo> = mutableListOf()

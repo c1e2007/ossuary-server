@@ -24,7 +24,11 @@ import org.rsmod.plugin.scripts.ScriptContext
 
 internal class ColosseumScript
 @Inject
-constructor(private val runs: ColosseumRuns, private val sol: ColosseumSol) : PluginScript() {
+constructor(
+    private val runs: ColosseumRuns,
+    private val sol: ColosseumSol,
+    private val rewards: ColosseumRewards,
+) : PluginScript() {
     override fun ScriptContext.startup() {
         onOpLoc1("loc.colosseum_entrance_outside") { goDown() }
         onOpLoc1("loc.colosseum_exit_lobby") { goUp() }
@@ -34,6 +38,7 @@ constructor(private val runs: ColosseumRuns, private val sol: ColosseumSol) : Pl
         onOpNpc1(ColosseumNpcs.MINIMUS_LOBBY) { startDialogue(it.npc) { lobbyMinimus() } }
         onOpNpc1(ColosseumNpcs.MINIMUS_ARENA) { openIntermission() }
         onOpNpc3(ColosseumNpcs.MINIMUS_ARENA) { askToLeave() }
+        onOpLoc1("loc.colosseum_reward") { openChest() }
 
         for ((index, button) in MOD_BUTTONS.withIndex()) {
             onIfModalButton(button) { selectModifier(index + 1) }
@@ -41,7 +46,10 @@ constructor(private val runs: ColosseumRuns, private val sol: ColosseumSol) : Pl
         onIfModalButton(CONTINUE_BUTTON) { confirm() }
 
         onEvent<InstancePlayerLeaveEvent>(instanceEventId(ColosseumRuns.KEY)) {
-            runs.runFor(player)?.let { runs.end(it) }
+            runs.runFor(player)?.let {
+                rewards.lost(it)
+                runs.end(it)
+            }
             player.colosseumSelected = 0
         }
     }
@@ -111,7 +119,7 @@ constructor(private val runs: ColosseumRuns, private val sol: ColosseumSol) : Pl
 
     private fun ProtectedAccess.begin(run: ColosseumRun) {
         resetVars(player)
-        player.colosseumCurrentGlory = 0
+        rewards.start(run)
         val minimus = runs.spawn(run, ColosseumNpcs.MINIMUS_ARENA, run.tile(Colosseum.MINIMUS_START))
         run.minimus = minimus
         run.sol = runs.spawn(run, ColosseumNpcs.SOL_SEATED, run.tile(Colosseum.SOL_SEAT))
@@ -139,9 +147,9 @@ constructor(private val runs: ColosseumRuns, private val sol: ColosseumSol) : Pl
             run.offered.getOrNull(0)?.key ?: -1,
             run.offered.getOrNull(1)?.key ?: -1,
             run.offered.getOrNull(2)?.key ?: -1,
-            0,
-            0,
-            0,
+            rewards.valueOf(run.loot?.rewards.orEmpty()),
+            rewards.valueOf(run.loot?.future.orEmpty()),
+            rewards.valueOf(run.loot?.previous.orEmpty()),
             0,
         )
     }
@@ -167,6 +175,24 @@ constructor(private val runs: ColosseumRuns, private val sol: ColosseumSol) : Pl
         run.startingIn = Colosseum.WAVE_START_DELAY
     }
 
+    private suspend fun ProtectedAccess.openChest() {
+        val run = runs.runFor(player) ?: return
+        val loot = run.loot ?: return
+        if (loot.rewards.isEmpty()) {
+            mes("The chest appears to be empty.")
+            return
+        }
+        val take =
+            choice2(
+                "Take everything I can carry.",
+                true,
+                "Discard all rewards.",
+                false,
+                title = "Rewards chest",
+            )
+        rewards.claim(run, discard = !take)
+    }
+
     private suspend fun ProtectedAccess.askToLeave() {
         val run = runs.runFor(player) ?: return
         if (run.stage != RunStage.INTERMISSION && run.stage != RunStage.FINISHED) return
@@ -185,7 +211,10 @@ constructor(private val runs: ColosseumRuns, private val sol: ColosseumSol) : Pl
                 false,
                 title = if (early) "Are you sure you wish to leave early?" else "Are you sure you wish to leave?",
             )
-        if (sure) {
+        if (!sure) return
+        if (early) {
+            rewards.finishRun(run)
+        } else {
             with(runs) { leaveArena() }
         }
     }
@@ -259,6 +288,7 @@ constructor(private val runs: ColosseumRuns, private val sol: ColosseumSol) : Pl
         run.wave++
         run.totalTicks += run.waveTicks
         ColosseumEffects.waveCompleted(run)
+        rewards.waveCompleted(run)
         run.stage = RunStage.INTERMISSION
         run.player.colosseumWavesCompleted = run.player.colosseumWavesCompleted + 1
         run.player.mes(

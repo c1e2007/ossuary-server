@@ -50,6 +50,7 @@ constructor(
     private val runs: ColosseumRuns,
     private val deps: BossDeps,
     private val locRepo: LocRepository,
+    private val rewards: ColosseumRewards,
 ) {
     fun begin(run: ColosseumRun) {
         run.stage = RunStage.SOL
@@ -335,9 +336,10 @@ constructor(
 
     private fun finish(run: ColosseumRun) {
         if (run.stage != RunStage.WON) return
-        run.stage = RunStage.FINISHED
         clear(run)
-        run.minimus = runs.spawn(run, ColosseumNpcs.MINIMUS_ARENA, run.tile(Colosseum.MINIMUS_BY_CHEST))
+        rewards.waveCompleted(run)
+        run.stage = RunStage.WON
+        rewards.finishRun(run)
     }
 
     fun clear(run: ColosseumRun) {

@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    implementation(projects.api.attr)
     implementation(projects.api.bosses)
     implementation(projects.api.cache)
     implementation(projects.api.config)
