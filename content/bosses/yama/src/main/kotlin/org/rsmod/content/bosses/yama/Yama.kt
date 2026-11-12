@@ -25,6 +25,7 @@ import org.rsmod.api.repo.loc.LocRepository
 import org.rsmod.api.script.onEvent
 import org.rsmod.game.entity.Npc
 import org.rsmod.game.entity.Player
+import org.rsmod.game.entity.npc.NpcApproach
 import org.rsmod.game.entity.npc.NpcStateEvents
 import org.rsmod.game.entity.util.PathingEntityCommon
 import org.rsmod.game.loc.LocAngle
@@ -303,6 +304,8 @@ internal class YamaFight(
             nextSpecialTick = tick + firstAttack + speed
         } else {
             npc.moveRestrict = MoveRestrict.NoMove
+            npc.approach = NpcApproach.StopInRange
+            npc.apRangeOverride = AP_RANGE
             YamaPhaseThree.start(this, majorGlyph)
         }
         deps.suppressAttacks(npc, firstAttack)
@@ -323,12 +326,16 @@ internal class YamaFight(
         val npc = yama ?: return
         if (phase == 3) return
         stance = next
+        // His attacks are on a timer, wherever the challenger stands (the reference's fight
+        // loop), so the combat trigger must fire across the whole arena: ap range covers it.
+        // After a melee hit he keeps closing in while casting; otherwise he stands his ground.
+        npc.apRangeOverride = AP_RANGE
         if (next == Stance.MELEE) {
             npc.moveRestrict = MoveRestrict.Normal
-            npc.apRangeOverride = 1
+            npc.approach = NpcApproach.ChaseToMelee
         } else {
             npc.moveRestrict = MoveRestrict.NoMove
-            npc.apRangeOverride = STANDING_REACH
+            npc.approach = NpcApproach.StopInRange
         }
     }
 
@@ -403,6 +410,15 @@ internal class YamaFight(
                 }
             throne?.say(lines.random())
         }
+        at(RESET_TICKS) { resetAfterKill() }
+    }
+
+    /** Yama is back on his throne and can be challenged again, without leaving the domain. */
+    private fun resetAfterKill() {
+        if (stopped) return
+        stopFight()
+        state = YamaState.SEATED
+        resetThrone()
     }
 
     private fun count(ticks: Int) {
@@ -472,7 +488,8 @@ internal class YamaFight(
         val PHASE_NAMES = listOf("main", "two", "three")
         val FIRST_ATTACK_TICKS = intArrayOf(5, 4, 3)
         const val PHASE_START_TICKS = 3
-        const val STANDING_REACH = 10
+        const val RESET_TICKS = 12
+        const val AP_RANGE = 32
 
         val FLAME_TILES =
             listOf(
@@ -527,6 +544,13 @@ internal constructor(
         // touches it.
         onEvent<NpcStateEvents.Create> { if (npc.type.id in yamaIds) pinNpc(npc) }
         onEvent<NpcStateEvents.Respawn> { if (npc.type.id in yamaIds) pinNpc(npc) }
+
+        // The Voice of Yama stands still, wherever the map data places him.
+        val voiceIds =
+            listOf(YamaIds.VOICE, YamaIds.VOICE_1OP, YamaIds.VOICE_2OP, YamaIds.VOICE_3OP)
+                .mapNotNullTo(mutableSetOf()) { it.npcId() }
+        onEvent<NpcStateEvents.Create> { if (npc.type.id in voiceIds) pinNpc(npc) }
+        onEvent<NpcStateEvents.Respawn> { if (npc.type.id in voiceIds) pinNpc(npc) }
 
         YamaLoot.register(this, fights, npcDeath)
         YamaFlares.registerHooks(this, fights)
