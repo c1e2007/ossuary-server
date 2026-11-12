@@ -28,6 +28,7 @@ constructor(
     private val runs: ColosseumRuns,
     private val sol: ColosseumSol,
     private val rewards: ColosseumRewards,
+    private val hazards: ColosseumHazards,
 ) : PluginScript() {
     override fun ScriptContext.startup() {
         onOpLoc1("loc.colosseum_entrance_outside") { goDown() }
@@ -255,6 +256,7 @@ constructor(
         for (spawn in ColosseumWaves.placeWave(types, run.playerTile(), run.random)) {
             spawnEnemy(run, spawn)
         }
+        hazards.waveStarted(run)
     }
 
     private fun spawnEnemy(run: ColosseumRun, spawn: WaveSpawn) {
@@ -270,7 +272,11 @@ constructor(
             sol.tendSand(run)
             return
         }
-        run.npcs.removeAll { it.hitpoints <= 0 || !it.isSlotAssigned }
+        val fallen = run.npcs.filter { it.hitpoints <= 0 || !it.isSlotAssigned }
+        run.npcs.removeAll(fallen.toSet())
+        for (npc in fallen) hazards.enemyDied(run, npc)
+        hazards.tick(run)
+        sol.tendSand(run)
         if (run.npcs.isEmpty()) {
             completeWave(run)
             return
@@ -288,6 +294,7 @@ constructor(
         run.wave++
         run.totalTicks += run.waveTicks
         ColosseumEffects.waveCompleted(run)
+        hazards.waveEnded(run)
         rewards.waveCompleted(run)
         run.stage = RunStage.INTERMISSION
         run.player.colosseumWavesCompleted = run.player.colosseumWavesCompleted + 1

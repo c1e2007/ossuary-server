@@ -40,6 +40,12 @@ internal class ColosseumRun(
     var startingIn: Int = 0
     var fight: SolFight? = null
     var loot: RunLoot? = null
+    val bees: MutableList<BeeSwarm> = mutableListOf()
+    var flare: SolarFlare? = null
+    var flarePillar: ArenaTile? = null
+    val totems: MutableMap<Npc, TotemRecord> = linkedMapOf()
+    val artillery: MutableMap<Npc, Int> = linkedMapOf()
+    val permanentSand: MutableSet<ArenaTile> = linkedSetOf()
     var chest: LocInfo? = null
     var doomStacks: Int = 0
     val sand: MutableMap<ArenaTile, LocInfo> = linkedMapOf()
@@ -55,6 +61,12 @@ internal class ColosseumRun(
         )
 
     fun tile(world: CoordGrid): CoordGrid = tile(world.x, world.z)
+
+    fun arenaTile(npc: Npc): ArenaTile =
+        ArenaTile(
+            npc.coords.x - southWest.x + Colosseum.ARENA_BASE_X,
+            npc.coords.z - southWest.z + Colosseum.ARENA_BASE_Z,
+        )
 
     fun playerTile(): ArenaTile =
         ArenaTile(

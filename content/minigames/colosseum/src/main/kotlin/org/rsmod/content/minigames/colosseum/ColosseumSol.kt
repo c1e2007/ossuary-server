@@ -3,6 +3,7 @@ package org.rsmod.content.minigames.colosseum
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.rsmod.api.bosses.runtime.BossDeps
+import org.rsmod.api.player.disableOverheadPrayers
 import org.rsmod.api.player.hit.modifier.NoopPlayerHitModifier
 import org.rsmod.api.player.hit.queueHit
 import org.rsmod.api.player.output.mes
@@ -188,7 +189,7 @@ constructor(
                 deps.worldQueues.add(before) {
                     if (run.stage == RunStage.WAVE && player.protectFromMelee != 0) {
                         early = true
-                        player.protectFromMelee = 0
+                        player.disableOverheadPrayers()
                         player.mes("You prayed too early; Sol Heredit's attack ignores it.")
                     }
                 }
@@ -238,15 +239,34 @@ constructor(
         }
     }
 
-    fun addSand(run: ColosseumRun, tile: ArenaTile) {
+    fun addSand(run: ColosseumRun, tile: ArenaTile, permanent: Boolean = true) {
+        if (permanent) run.permanentSand += tile
         if (run.sand.containsKey(tile)) return
         val loc = locRepo.add(run.tile(tile.x, tile.z), SAND_LOC, Int.MAX_VALUE, LocAngle.West, LocShape.CentrepieceStraight)
         run.sand[tile] = loc
     }
 
+    fun removeSand(run: ColosseumRun, tile: ArenaTile, loc: LocInfo) {
+        locRepo.del(loc, 0)
+        run.sand.remove(tile)
+        run.permanentSand.remove(tile)
+    }
+
+    fun landJavelin(run: ColosseumRun, tile: ArenaTile) {
+        val tier = run.modifiers.tier(ColosseumModifier.REENTRY)
+        if (tier == 0 || run.stage != RunStage.WAVE) return
+        val permanent = tier >= 2
+        addSand(run, tile, permanent)
+        if (tier < 2) return
+        val second = ArenaTile(tile.x - 1, tile.z - 1)
+        addSand(run, second, permanent)
+        if (tier >= 3) addSand(run, ArenaTile(second.x - 1, second.z), permanent)
+    }
+
     fun clearSand(run: ColosseumRun) {
         for (loc in run.sand.values) locRepo.del(loc, 0)
         run.sand.clear()
+        run.permanentSand.clear()
     }
 
     fun tendSand(run: ColosseumRun) {
