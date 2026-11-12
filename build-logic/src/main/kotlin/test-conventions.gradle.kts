@@ -1,0 +1,26 @@
+val catalogs = extensions.getByType<VersionCatalogsExtension>().named("libs")
+val junitVersion by lazy { catalogs.findVersion("junit").get().requiredVersion }
+
+plugins {
+    kotlin("jvm")
+}
+
+dependencies {
+    testImplementation(platform("org.junit:junit-bom:${junitVersion}"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+    maxHeapSize = "2048m"
+    testLogging {
+        events("failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
+    systemProperty("junit.jupiter.extensions.autodetection.enabled", false)
+    systemProperty("junit.jupiter.execution.parallel.enabled", true)
+    systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
+    systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "concurrent")
+}

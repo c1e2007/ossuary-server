@@ -1,0 +1,135 @@
+package org.rsmod.content.quest.manager
+
+import dev.openrune.rscm.RSCM
+import dev.openrune.rscm.RSCMType
+import org.rsmod.api.player.protect.ProtectedAccess
+import org.rsmod.api.player.vars.VarPlayerIntMapSetter
+import org.rsmod.api.script.onPlayerLogin
+import org.rsmod.plugin.scripts.PluginScript
+import org.rsmod.plugin.scripts.ScriptContext
+
+enum class JournalState { OVERVIEW, LOG }
+
+enum class QuestProgressState {
+    NOT_STARTED,
+    IN_PROGRESS,
+    FINISHED;
+
+    val isNotStarted: Boolean
+        get() = this == NOT_STARTED
+
+    val isInProgress: Boolean
+        get() = this == IN_PROGRESS
+
+    val isCompleted: Boolean
+        get() = this == FINISHED
+
+    companion object {
+        fun fromStage(stage: Int, endState: Int): QuestProgressState =
+            when {
+                stage <= 0 -> NOT_STARTED
+                stage >= endState -> FINISHED
+                else -> IN_PROGRESS
+            }
+    }
+}
+
+@DslMarker
+annotation class QuestJournalDsl
+
+data class QuestReward(
+    val xp: Map<String, Double> = emptyMap(),
+    val items: List<Pair<String, Int>> = emptyList(),
+    val extraLines: List<String> = emptyList(),
+    val itemLabels: Map<String, String> = emptyMap()
+)
+
+@QuestJournalDsl
+fun rewards(builder: QuestRewardBuilder.() -> Unit): QuestReward {
+    return QuestRewardBuilder().apply(builder).build()
+}
+
+@QuestJournalDsl
+class QuestRewardBuilder {
+    private val _xp = mutableMapOf<String, Double>()
+    private val _items = mutableListOf<Pair<String, Int>>()
+    private val _itemLabels = mutableMapOf<String, String>()
+    private val _extraLines = mutableListOf<String>()
+
+    fun xp(skill: String, amount: Double) {
+        _xp[skill] = amount
+    }
+
+    fun item(id: String, amount: Int = 1, label: String? = null) {
+        if (label != null) _itemLabels[id] = label
+        _items.add(id to amount)
+    }
+
+    fun extra(text: String) {
+        _extraLines += text
+    }
+
+    fun build(): QuestReward = QuestReward(_xp, _items, _extraLines, _itemLabels)
+}
+
+abstract class QuestScript(
+    val questKey: String,
+    val questVarp: String,
+    val rewards: QuestReward,
+    val completedQuestItemDisplay: ItemRewardDisplay,
+    val questVarbit: String? = null,
+    val closeDialogue: QuestClose = QuestClose.OnFinished,
+    val closeScroll: QuestClose = QuestClose.Never,
+    val completeJingle: String = QUEST_COMPLETE_JINGLE,
+) : PluginScript() {
+
+    val quest =
+        Quest.register(
+            questKey,
+            questVarp,
+            completedQuestItemDisplay,
+            rewards,
+            questVarbit,
+            closeDialogue,
+            closeScroll,
+            completeJingle,
+        )
+
+    abstract fun subTitle(): String
+
+    abstract fun questLog(player: ProtectedAccess): String
+
+    abstract fun completedLog(player: ProtectedAccess): String
+
+    abstract fun ScriptContext.init()
+
+    override fun ScriptContext.startup() {
+        RSCM.requireRSCM(RSCMType.DBROW, "dbrow.${questKey}")
+
+        QuestJournalRegistry.register(
+            quest,
+            QuestJournalContent(
+                subTitle = ::subTitle,
+                questLog = ::questLog,
+                completedLog = ::completedLog,
+            ),
+        )
+
+        onPlayerLogin {
+            quest.migrateLegacyStage(player)
+            VarPlayerIntMapSetter.set(player, questVarbit ?: questVarp, quest.getQuestStage(player))
+        }
+
+        this.init()
+    }
+
+    protected fun questJournal(
+        player: ProtectedAccess,
+        builder: QuestJournalBuilder.() -> Unit
+    ): String = buildQuestJournal(player, quest, builder)
+
+    protected fun completionJournal(
+        player: ProtectedAccess,
+        builder: QuestJournalBuilder.() -> Unit
+    ): String = buildCompletionJournal(player, quest, builder)
+}

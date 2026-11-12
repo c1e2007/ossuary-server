@@ -1,0 +1,27 @@
+package org.rsmod.api.bosses.spec
+
+sealed interface Selector {
+    data class WeightedRandom(val entries: List<WeightedRef> = emptyList()) : Selector {
+        constructor(vararg entries: WeightedRef) : this(entries.toList())
+    }
+
+    data class Rotation(val sequence: List<String>, val randomStart: Boolean = false) : Selector
+}
+
+data class WeightedRef(
+    val ability: String,
+    val weight: Int = 1,
+    val cooldown: Int = 0,
+    val persistCooldown: Boolean = false,
+    val requires: Condition = Condition.Always,
+)
+
+public data class AbilityRef(public val name: String)
+
+public data class PhaseRef(public val name: String)
+
+infix fun String.weight(w: Int): WeightedRef = WeightedRef(this, weight = w)
+
+infix fun AbilityRef.weight(w: Int): WeightedRef = WeightedRef(name, weight = w)
+infix fun WeightedRef.cooldown(t: Int): WeightedRef = copy(cooldown = t)
+infix fun WeightedRef.requires(c: Condition): WeightedRef = copy(requires = c)

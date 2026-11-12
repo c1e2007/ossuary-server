@@ -1,0 +1,96 @@
+package org.rsmod.api.player.output
+
+import net.rsprot.protocol.game.outgoing.logout.LogoutWithReason
+import net.rsprot.protocol.game.outgoing.misc.client.HintArrow
+import net.rsprot.protocol.game.outgoing.misc.client.ServerTickEnd
+import net.rsprot.protocol.game.outgoing.misc.client.SetInteractionMode
+import net.rsprot.protocol.game.outgoing.misc.client.UpdateRebootTimerV2
+import net.rsprot.protocol.game.outgoing.misc.player.SetPlayerOp
+import org.rsmod.game.entity.Player
+import org.rsmod.map.CoordGrid
+
+public object MiscOutput {
+    /** @see [HintArrow] */
+    public fun hintArrowNpc(player: Player, npcSlot: Int) {
+        player.client.write(HintArrow(HintArrow.NpcHintArrow(npcSlot)))
+    }
+
+    public fun hintArrowTile(player: Player, coords: CoordGrid, height: Int) {
+        val position = HintArrow.TileHintArrow.HintArrowTilePosition.CENTER
+        player.client.write(HintArrow(HintArrow.TileHintArrow(coords.x, coords.z, height, position)))
+    }
+
+    public fun hintArrowReset(player: Player) {
+        player.client.write(HintArrow(HintArrow.ResetHintArrow))
+    }
+
+    /** @see [SetPlayerOp] */
+    public fun setPlayerOp(player: Player, slot: Int, op: String?, priority: Boolean = false) {
+        player.options.add(slot, op)
+        player.client.write(SetPlayerOp(slot, priority, op))
+    }
+
+    public fun findPlayerOption(player: Player, query: String): Int? {
+        val index = player.options.indexOfFirst { it == query }
+        return if (index >= 0) index else null
+    }
+
+    public fun clearPlayerOp(player: Player, slot: Int, query: String) {
+        val optionIdx = findPlayerOption(player, query)
+        if (optionIdx == slot) {
+            setPlayerOp(player, slot, null)
+        }
+    }
+
+    /** @see [ServerTickEnd] */
+    public fun serverTickEnd(player: Player) {
+        player.client.write(ServerTickEnd)
+    }
+
+    /** Calls [LogoutWithReason] with an arg of `0` (reason = `Requested`). */
+    public fun logout(player: Player) {
+        resetInteractionMode(player)
+        player.client.write(LogoutWithReason(reason = 0))
+    }
+
+    /** Calls [LogoutWithReason] with an arg of `1` (reason = `Kicked`). */
+    public fun logoutKicked(player: Player) {
+        resetInteractionMode(player)
+        player.client.write(LogoutWithReason(reason = 1))
+    }
+
+    /** Calls [LogoutWithReason] with an arg of `2` (reason = `Updating`). */
+    public fun logoutUpdating(player: Player) {
+        resetInteractionMode(player)
+        player.client.write(LogoutWithReason(reason = 2))
+    }
+
+    private fun resetInteractionMode(player: Player) {
+        player.client.write(
+            SetInteractionMode(
+                worldId = DEFAULT_WORLD_ID,
+                tileInteractionMode = TILE_INTERACTION_WALK,
+                entityInteractionMode = ENTITY_INTERACTION_ALL,
+            )
+        )
+    }
+
+    /** @see [UpdateRebootTimer] */
+    public fun updateRebootTimer(player: Player, cycles: Int, message: String = "") {
+        require(cycles in 0..65535) { "`cycles` must be within range [0..65535]. (cycles=$cycles)" }
+        if (message.isEmpty()) {
+            player.client.write(UpdateRebootTimerV2(cycles, UpdateRebootTimerV2.SetUpdateMessage("")))
+        } else {
+            player.client.write(UpdateRebootTimerV2(cycles, UpdateRebootTimerV2.SetUpdateMessage(message)))
+        }
+    }
+
+    /** Calls [UpdateRebootTimer] with an arg of `0`. */
+    public fun clearUpdateRebootTimer(player: Player) {
+        updateRebootTimer(player, cycles = 0)
+    }
+
+    private const val DEFAULT_WORLD_ID = -2
+    private const val TILE_INTERACTION_WALK = 1
+    private const val ENTITY_INTERACTION_ALL = 1
+}

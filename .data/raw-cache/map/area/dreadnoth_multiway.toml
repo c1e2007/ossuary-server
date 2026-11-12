@@ -1,0 +1,12 @@
+[[area]]
+name = "Dreadnoth Arena"
+area_id = "area.multiway"
+levels = [0]
+
+[[area.polygons]]
+vertices = [
+    [4160, 5632],
+    [4224, 5632],
+    [4224, 5696],
+    [4160, 5696],
+]

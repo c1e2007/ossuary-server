@@ -1,0 +1,27 @@
+package org.rsmod.content.slayer
+
+import org.rsmod.api.combat.commons.npc.NpcAttackOverrideHook
+import org.rsmod.api.death.NpcAttackValidateHook
+import org.rsmod.api.death.NpcDeathKillHook
+import org.rsmod.api.npc.hit.NpcHitpointsFloorHook
+import org.rsmod.api.player.hook.PlayerPostTickHook
+import org.rsmod.content.slayer.SlayerNpcKillHook
+import org.rsmod.content.slayer.requirements.SlayerFinisherFloor
+import org.rsmod.content.slayer.requirements.SlayerGearAttackHook
+import org.rsmod.content.slayer.requirements.SlayerLevelAttackHook
+import org.rsmod.content.slayer.requirements.SlayerTaskLockAttackHook
+import org.rsmod.content.slayer.superior.SlayerSuperiorAttackHook
+import org.rsmod.content.slayer.superior.SlayerSuperiorEvents
+import org.rsmod.plugin.module.PluginModule
+
+class SlayerModule : PluginModule() {
+    override fun bind() {
+        addSetBinding<NpcDeathKillHook>(SlayerNpcKillHook::class.java)
+        addSetBinding<NpcAttackValidateHook>(SlayerSuperiorAttackHook::class.java)
+        addSetBinding<NpcAttackValidateHook>(SlayerLevelAttackHook::class.java)
+        addSetBinding<NpcAttackValidateHook>(SlayerTaskLockAttackHook::class.java)
+        addSetBinding<NpcAttackOverrideHook>(SlayerGearAttackHook::class.java)
+        addSetBinding<NpcHitpointsFloorHook>(SlayerFinisherFloor::class.java)
+        addSetBinding<PlayerPostTickHook>(SlayerSuperiorEvents::class.java)
+    }
+}

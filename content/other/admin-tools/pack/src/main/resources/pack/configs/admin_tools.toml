@@ -1,0 +1,6 @@
+# Inventory options for the admin flask. The rotten potato keeps its own options.
+
+[[item]]
+id = "obj.doti_flask"
+inherit = "obj.doti_flask"
+interfaceOptions = ["Drink", "null", "null", "null", "Drop"]

@@ -1,0 +1,2 @@
+[clientscript,tester_hub_init](component $border)
+~stoneborder($border, "Raid Testing", 0);

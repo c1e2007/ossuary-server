@@ -1,0 +1,34 @@
+id = "Corrupted bear Drops"
+npcs = ["npc.crystal_bear_hm"]
+
+[[guaranteed]]
+obj = "obj.gauntlet_crystal_shard_hm"
+count = "50..60"
+
+[main]
+total = 18
+name = "Corrupted bear Drops"
+
+[[main.entries]]
+weight = 3
+nothing = true
+
+[[main.entries]]
+weight = 9
+obj = "obj.gauntlet_crystal_shard_hm"
+count = "10..21"
+
+[[main.entries]]
+weight = 3
+obj = "obj.gauntlet_raw_food"
+count = "3..5"
+
+[[main.entries]]
+weight = 2
+obj = "obj.gauntlet_herb_hm"
+count = 1
+
+[[main.entries]]
+weight = 1
+obj = "obj.gauntlet_teleport_crystal_hm"
+count = 1

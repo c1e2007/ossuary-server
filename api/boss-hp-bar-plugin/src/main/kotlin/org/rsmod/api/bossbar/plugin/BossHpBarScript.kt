@@ -1,0 +1,240 @@
+package org.rsmod.api.bossbar.plugin
+
+import dev.openrune.rscm.RSCM.asRSCM
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
+import java.awt.Color
+import org.rsmod.annotations.InternalApi
+import org.rsmod.api.bossbar.BossHpBarMode
+import org.rsmod.api.config.aliases.ParamInt
+import org.rsmod.api.config.refs.params
+import org.rsmod.api.instances.InstanceManager
+import org.rsmod.api.instances.events.InstancePlayerJoinUnboundEvent
+import org.rsmod.api.instances.events.InstancePlayerLeaveUnboundEvent
+import org.rsmod.api.player.output.ClientScripts
+import org.rsmod.api.player.output.runClientScript
+import org.rsmod.api.player.ui.ifSetHide
+import org.rsmod.api.player.ui.setColour
+import org.rsmod.api.player.vars.boolVarBit
+import org.rsmod.api.player.vars.intVarBit
+import org.rsmod.api.player.vars.intVarp
+import org.rsmod.api.script.onEvent
+import org.rsmod.api.script.onPlayerSoftTimer
+import org.rsmod.game.entity.Npc
+import org.rsmod.game.entity.Player
+import org.rsmod.game.entity.npc.NpcStateEvents
+import org.rsmod.game.queue.WorldQueueList
+import org.rsmod.plugin.scripts.PluginScript
+import org.rsmod.plugin.scripts.ScriptContext
+
+@Singleton
+public class BossHpBarScript @Inject constructor(
+    private val instances: InstanceManager,
+    private val contributor: BossHpBarDamageContributor,
+    private val worldQueues: WorldQueueList,
+) : PluginScript() {
+
+    internal var Player.bossHudDisabled by boolVarBit("varbit.hpbar_hud_boss_disabled")
+    internal var Player.bossHudCurrentHp by intVarBit("varbit.hpbar_hud_hp")
+    internal var Player.bossHudBaseHp by intVarBit("varbit.hpbar_hud_basehp")
+    internal var Player.bossHudNpcID by intVarp("varp.hpbar_hud_npc")
+    internal var Player.bossHudBarSize by intVarBit("varbit.hpbar_hud_boss")
+    private var Player.bossHudOpenGeneration by intVarp("varp.hpbar_open_generation")
+
+    override fun ScriptContext.startup() {
+        onEvent<InstancePlayerJoinUnboundEvent> {
+            for (npc in instances.npcsForInstance(instanceId)) {
+                if (npcBarMode(npc) == BossHpBarMode.ON_ENTER && npc.isSlotAssigned && npc.hitpoints > 0) {
+                    onOpen(player, npc)
+                }
+            }
+        }
+
+        onEvent<InstancePlayerLeaveUnboundEvent> {
+            for (npc in instances.npcsForInstance(instanceId)) {
+                if (npcBarMode(npc) == BossHpBarMode.ON_ENTER) {
+                    onClose(player, npc, instant = true)
+                }
+            }
+        }
+
+        onPlayerSoftTimer(BossHpBarDamageContributor.COMBAT_CHECK_TIMER) {
+            contributor.checkAndExpirePlayer(player)
+        }
+
+        onEvent<NpcStateEvents.Delete> {
+            if (contributor.isClosingAfterDeath(npc)) return@onEvent
+            when (npcBarMode(npc)) {
+                BossHpBarMode.ON_ATTACK -> {
+                    for (player in contributor.removeTrackedForNpc(npc)) {
+                        onClose(player, npc)
+                    }
+                }
+                BossHpBarMode.ON_ENTER -> closeForAllInstancePlayers(npc)
+                BossHpBarMode.NEVER -> Unit
+            }
+        }
+
+        onEvent<NpcStateEvents.Respawn> {
+            if (npcBarMode(npc) != BossHpBarMode.ON_ENTER) return@onEvent
+            val instanceId = instances.instanceForNpc(npc) ?: return@onEvent
+            for (player in contributor.playersInInstance(instanceId)) {
+                onOpen(player, npc)
+                onUpdate(player, npc, npc.baseHitpointsLvl, npc.baseHitpointsLvl)
+            }
+        }
+    }
+
+    public fun onOpen(player: Player, npc: Npc) {
+        if (player.bossHudDisabled) return
+
+        player.bossHudOpenGeneration++
+        player.bossHudNpcID = npc.visType.id
+        player.bossHudBaseHp = npc.baseHitpointsLvl
+        player.bossHudCurrentHp = npc.hitpoints
+        player.bossHudBarSize = 1
+
+        player.setColour("component.hpbar_hud:inner", ORIGINAL_COLORS[0])
+        applyColours(player, npc)
+
+        player.runClientScript(2287, commonComponents, 0)
+        openScripts(player)
+    }
+
+    /**
+     * Redraws an open bar the way Jagex does on every change, which the extra bar (e.g. a charge
+     * meter) needs since the client doesn't redraw it when its varbits change. [extraColours]
+     * sets the extra bar's colours; they must be sent between the open and the extra redraw.
+     */
+    public fun onRefresh(player: Player, npc: Npc, extraColours: Player.() -> Unit = {}) {
+        if (player.bossHudDisabled) return
+        applyColours(player, npc)
+        runHudOpen(player)
+        player.extraColours()
+        player.runClientScript(10152, 0)
+    }
+
+    public fun onRecolour(player: Player, npc: Npc) {
+        if (player.bossHudDisabled) return
+        applyColours(player, npc)
+    }
+
+    private fun applyColours(player: Player, npc: Npc) {
+        val backColour = npc.barColour(params.boss_hp_bar_colour_back) ?: ORIGINAL_COLORS[1]
+        val slidingColour = npc.barColour(params.boss_hp_bar_colour_sliding) ?: ORIGINAL_COLORS[2]
+        val remainingColour =
+            npc.barColour(params.boss_hp_bar_colour_remaining) ?: DEFAULT_REMAINING_COLOR
+        player.setColour("component.hpbar_hud:health_bar_back", backColour)
+        player.setColour("component.hpbar_hud:health_bar_sliding", slidingColour)
+        player.setColour("component.hpbar_hud:health_bar_remaining", remainingColour)
+    }
+
+    @OptIn(InternalApi::class)
+    public fun onClose(player: Player, npc: Npc, instant: Boolean = false) {
+        if (instant) {
+            player.ifSetHide("component.hpbar_hud:hp", true)
+            return
+        }
+        player.runClientScript(2889, commonComponents, 0)
+        val generation = player.bossHudOpenGeneration
+        worldQueues.add(CLOSE_FADE_TICKS) {
+            if (player.isSlotAssigned && player.bossHudOpenGeneration == generation) {
+                player.ifSetHide("component.hpbar_hud:hp", true)
+            }
+        }
+    }
+
+    public fun fadeOut(player: Player) {
+        player.runClientScript(2889, commonComponents, 0)
+    }
+
+    public fun onDeathClose(player: Player) {
+        player.bossHudNpcID = -1
+        player.bossHudBaseHp = 0
+        player.bossHudBarSize = 0
+        player.ifSetHide("component.hpbar_hud:hp", true)
+        ClientScripts.ccDeleteAll(player, "component.hpbar_hud:container")
+    }
+
+    public fun onUpdate(player: Player, npc: Npc, currentHp: Int = npc.hitpoints, maxHp: Int = npc.baseHitpointsLvl) {
+        if (player.bossHudDisabled) return
+
+        player.bossHudNpcID = npc.visType.id
+        player.bossHudBaseHp = maxHp
+        player.bossHudCurrentHp = currentHp
+    }
+
+    private fun closeForAllInstancePlayers(npc: Npc) {
+        val instanceId = instances.instanceForNpc(npc) ?: return
+        for (player in contributor.playersInInstance(instanceId)) {
+            onClose(player, npc)
+        }
+    }
+
+    private fun npcBarMode(npc: Npc): BossHpBarMode =
+        BossHpBarMode.fromId(
+            npc.visType.paramOrNull(params.boss_hp_bar_mode)
+                ?: npc.type.paramOrNull(params.boss_hp_bar_mode)
+                ?: 0,
+        )
+
+    private fun Npc.barColour(param: ParamInt): Color? {
+        val packed = visType.paramOrNull(param) ?: return null
+        if (packed < 0) return null
+        return Color(packed)
+    }
+
+    private fun openScripts(player: Player) {
+        player.runClientScript(2887, commonComponents, 255)
+        player.runClientScript(2102, commonComponents, 1)
+        runHudOpen(player)
+    }
+
+    private fun runHudOpen(player: Player) {
+        player.runClientScript(
+            2376,
+            "component.hpbar_hud:universe".asRSCM(),
+            "component.hpbar_hud:hpdodgerside".asRSCM(),
+            "component.hpbar_hud:hpdodger".asRSCM(),
+            "component.hpbar_hud:hp".asRSCM(),
+            "component.hpbar_hud:name_area".asRSCM(),
+            "component.hpbar_hud:hp_bar".asRSCM(),
+            "component.hpbar_hud:hp_bar_text".asRSCM(),
+            "component.hpbar_hud:health_bar_back".asRSCM(),
+            "component.hpbar_hud:health_bar_sliding".asRSCM(),
+            "component.hpbar_hud:health_bar_remaining".asRSCM(),
+            "component.hpbar_hud:creature_name".asRSCM(),
+            "component.hpbar_hud:outer_border".asRSCM(),
+            "component.hpbar_hud:name_backing".asRSCM(),
+            "component.hpbar_hud:inner_border".asRSCM(),
+            "component.hpbar_hud:health_bar_lower_threshold".asRSCM(),
+            "component.hpbar_hud:health_bar_upper_threshold".asRSCM(),
+            "component.hpbar_hud:hp_bar_1".asRSCM(),
+            "component.hpbar_hud:hp_bar_2".asRSCM(),
+            "component.hpbar_hud:hpcontentside".asRSCM()
+        )
+    }
+
+    public val commonComponents: IntArray = intArrayOf(
+        "component.hpbar_hud:hp".asRSCM(),
+        "component.hpbar_hud:name_area".asRSCM(),
+        "component.hpbar_hud:outer_border".asRSCM(),
+        "component.hpbar_hud:name_backing".asRSCM(),
+        "component.hpbar_hud:creature_name".asRSCM(),
+        "component.hpbar_hud:inner_border".asRSCM(),
+        "component.hpbar_hud:health_bar_back".asRSCM(),
+        "component.hpbar_hud:health_bar_sliding".asRSCM(),
+        "component.hpbar_hud:health_bar_remaining".asRSCM(),
+        "component.hpbar_hud:hp_bar_text".asRSCM(),
+        "component.hpbar_hud:health_bar_lower_threshold".asRSCM(),
+        "component.hpbar_hud:health_bar_upper_threshold".asRSCM(),
+        "component.hpbar_hud:hp_bar_1".asRSCM(),
+        "component.hpbar_hud:hp_bar_2".asRSCM(),
+    )
+
+    public companion object {
+        public val ORIGINAL_COLORS: Array<Color> = arrayOf(Color(204, 0, 0), Color(200, 0, 0), Color(0, 144, 0))
+        private val DEFAULT_REMAINING_COLOR = Color(0, 200, 0)
+        private const val CLOSE_FADE_TICKS = 2
+    }
+}

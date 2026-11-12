@@ -1,0 +1,1290 @@
+package org.rsmod.api.bosses.runtime
+
+import dev.openrune.ServerCacheManager
+import dev.openrune.rscm.RSCM.asRSCM
+import dev.openrune.rscm.RSCMType
+import dev.openrune.types.HitmarkTypeGroup
+import dev.openrune.types.NpcMode
+import dev.openrune.types.ProjAnimType
+import dev.openrune.types.aconverted.SpotanimType
+import kotlin.math.abs
+import kotlin.math.sign
+import org.rsmod.api.bosses.spec.*
+import org.rsmod.api.bosses.spec.HitType as BossHitType
+import org.rsmod.api.combat.commons.CombatEffects
+import org.rsmod.api.combat.commons.DragonfireProtection
+import org.rsmod.api.combat.commons.player.combatPlayDefendAnim
+import org.rsmod.api.combat.commons.player.finishNpcHit
+import org.rsmod.api.combat.commons.player.queueCombatRetaliate
+import org.rsmod.api.combat.commons.types.MeleeAttackType
+import org.rsmod.api.mechanics.toxins.impl.PlayerBleed
+import org.rsmod.api.npc.access.StandardNpcAccess
+import org.rsmod.api.npc.apPlayer2
+import org.rsmod.api.npc.heal
+import org.rsmod.api.npc.isValidTarget
+import org.rsmod.api.player.disableOverheadPrayers
+import org.rsmod.api.player.disablePrayers
+import org.rsmod.api.player.hit.modifier.NoopPlayerHitModifier
+import org.rsmod.api.player.hit.modifier.PlayerHitModifier
+import org.rsmod.api.player.hit.modify
+import org.rsmod.api.player.hit.queueHit
+import org.rsmod.api.player.hit.queueImpactHit
+import org.rsmod.api.player.isValidTarget
+import org.rsmod.api.player.midiSong
+import org.rsmod.api.player.output.Camera
+import org.rsmod.api.player.output.mes
+import org.rsmod.api.player.output.soundSynth
+import org.rsmod.api.player.stat.hitpoints
+import org.rsmod.api.player.stat.statDrain
+import org.rsmod.game.entity.Npc
+import org.rsmod.game.entity.Player
+import org.rsmod.game.entity.util.EntityExactMove
+import org.rsmod.game.entity.util.PathingEntityCommon
+import org.rsmod.game.headbar.Headbar as EngineHeadbar
+import org.rsmod.game.hit.HitType
+import org.rsmod.game.hit.Hitmark
+import org.rsmod.game.interact.InteractionPlayer
+import org.rsmod.game.map.collision.isWalkBlocked
+import org.rsmod.game.proj.ProjAnim
+import org.rsmod.map.CoordGrid
+import org.rsmod.map.util.Bounds
+
+/** The [BossEncounter.epoch] one ability run belongs to, shared with the interpreters it spawns. */
+class AbilityRun internal constructor(internal var epoch: Int)
+
+class EffectInterpreter internal constructor(
+    private val npc: Npc,
+    private val target: Player,
+    private val spec: BossSpec,
+    private val encounter: BossEncounter,
+    private val deps: BossDeps,
+    private val abilityRun: AbilityRun,
+    private val bindings: TileBindings,
+    private val hitDamage: Int = 0,
+) {
+    constructor(
+        npc: Npc,
+        target: Player,
+        spec: BossSpec,
+        encounter: BossEncounter,
+        deps: BossDeps,
+    ) : this(npc, target, spec, encounter, deps, AbilityRun(encounter.epoch), TileBindings.NONE)
+
+    private fun child(
+        target: Player = this.target,
+        bindings: TileBindings = this.bindings,
+        hitDamage: Int = this.hitDamage,
+    ): EffectInterpreter =
+        EffectInterpreter(npc, target, spec, encounter, deps, abilityRun, bindings, hitDamage)
+
+    private fun asNpc(other: Npc): EffectInterpreter =
+        EffectInterpreter(other, target, spec, encounter, deps, AbilityRun(encounter.epoch), bindings, hitDamage)
+
+    private val actingAsBoss: Boolean
+        get() = npc === encounter.npc
+
+    private fun tileScope(target: Player): TileScope =
+        object : TileScope {
+            override fun tile(expr: TargetExpr.Single): CoordGrid =
+                npc.resolveTile(expr, target, bindings, deps.random, ::randomWalkableTile, ::playerOf)
+
+            override fun set(name: String): List<CoordGrid> = bindings.set(name)
+        }
+
+    private fun playerOf(expr: TargetExpr.Single): Player? = resolveSingle(expr)
+
+    private fun focusPlayer(): Player? {
+        val stored = encounter.focus
+        if (stored != null && stored.isValidTarget()) return stored
+        val area = encounter.focusArea ?: return null
+        return randomPlayerIn(area)?.also { encounter.focus = it }
+    }
+
+    private fun randomPlayerIn(area: Area): Player? {
+        val box = resolveArea(area)
+        val candidates = deps.playerList.filter { it.isValidTarget() && box.contains(it.coords) }
+        return if (candidates.isEmpty()) null else candidates[deps.random.of(candidates.size)]
+    }
+
+    private fun resolveNpcs(expr: NpcExpr): List<Npc> =
+        when (expr) {
+            is NpcExpr.Owned -> {
+                val type = expr.npcType?.asRSCM(RSCMType.NPC)
+                encounter.ownedNpcList().filter { type == null || it.visType.id == type }
+            }
+            is NpcExpr.NearestOwned -> {
+                val type = expr.npcType.asRSCM(RSCMType.NPC)
+                val from = resolveTile(expr.of)
+                encounter
+                    .ownedNpcList()
+                    .filter { it.visType.id == type }
+                    .filter { footprintDistance(it, from) <= expr.radius }
+                    .minByOrNull { footprintDistance(it, from) }
+                    ?.let(::listOf)
+                    .orEmpty()
+            }
+            is NpcExpr.Custom -> expr.select(encounter.npc, target, encounter.ownedNpcList())
+        }
+
+    private fun footprintDistance(other: Npc, from: CoordGrid): Int {
+        val dx = maxOf(other.coords.x - from.x, from.x - (other.coords.x + other.size - 1), 0)
+        val dz = maxOf(other.coords.z - from.z, from.z - (other.coords.z + other.size - 1), 0)
+        return maxOf(dx, dz)
+    }
+
+    private val interrupted: Boolean
+        get() = encounter.epoch != abilityRun.epoch
+
+    fun run(access: StandardNpcAccess?, effect: Effect, onComplete: () -> Unit = {}) {
+        when (effect) {
+            is Effect.Anim -> npc.anim(effect.seq, effect.delay)
+            is Effect.IdleAnim -> effect.seq?.let(npc::setIdleAnim) ?: npc.clearIdleAnim()
+            is Effect.ResetAnim -> npc.resetAnim()
+            is Effect.ForceNext -> encounter.forceNext(effect.ability)
+            is Effect.NextAttackIn -> encounter.nextAttackTick = deps.mapClock.cycle + effect.ticks
+            is Effect.Say -> npc.say(effect.text)
+            is Effect.Sound -> {
+                val at = effect.at?.let(::resolveTile) ?: npc.coords
+                deps.worldRepo.soundArea(at, effect.synth, delay = effect.delay, radius = effect.radius)
+            }
+            is Effect.SoundTo -> {
+                for (t in resolvePlayers(effect.target)) {
+                    if (t.coords.level == npc.coords.level && t.coords.chebyshevDistance(npc.coords) <= SOUND_TO_RANGE) {
+                        t.soundSynth(effect.synth, effect.loops, effect.delay)
+                    }
+                }
+            }
+            is Effect.Spotanim -> {
+                val onTargets = effect.target
+                if (onTargets == null) {
+                    npc.spotanim(effect.spot, effect.delay, effect.height, effect.slot)
+                } else {
+                    for (t in resolvePlayers(onTargets)) {
+                        t.spotanim(effect.spot, delay = effect.delay, height = effect.height, slot = effect.slot)
+                    }
+                }
+            }
+            is Effect.MapSpotanim -> {
+                val coord = resolveTile(effect.at)
+                val spot = SpotanimType(effect.spot.asRSCM(RSCMType.SPOTANIM))
+                val delay = effect.delayExpr?.let(::evaluateVar) ?: effect.delay
+                deps.worldRepo.spotanimMap(spot, coord, effect.height, delay)
+            }
+            is Effect.Broadcast -> {
+                val radius = effect.radius
+                for (player in deps.playerList) {
+                    if (player.coords.chebyshevDistance(npc.coords) <= radius) {
+                        player.mes(effect.text)
+                    }
+                }
+            }
+            is Effect.CamShake -> {
+                val players =
+                    effect.target?.let(::resolvePlayers)
+                        ?: deps.playerList.filter { it.coords.chebyshevDistance(npc.coords) <= effect.radius }
+                for (player in players) {
+                    val random = effect.randomMax?.let { deps.random.of(effect.random, it) } ?: effect.random
+                    Camera.camShake(player, effect.axis, random, effect.amplitude, effect.rate)
+                }
+            }
+            is Effect.CamReset -> resolvePlayers(effect.target).forEach(Camera::camReset)
+            is Effect.Delay -> {
+                scheduleWait(effect.ticks, onComplete)
+                return
+            }
+            is Effect.Wait -> {
+                scheduleWait(effect.ticks, onComplete)
+                return
+            }
+            is Effect.NoOp -> {}
+            is Effect.Message -> applyMessage(effect)
+
+            is Effect.Hit -> applyHit(access, effect)
+            is Effect.Projectile -> fireProjectile(access, effect)
+            is Effect.TileAoE -> applyTileAoE(effect)
+            is Effect.Debris -> applyDebris(effect)
+            is Effect.Summon -> summon(access, effect)
+            is Effect.Bleed -> applyBleed(access, effect)
+            is Effect.Poison -> applyPoison(effect)
+            is Effect.Freeze -> applyFreeze(effect)
+            is Effect.DisablePrayers ->
+                if (effect.overheadsOnly) target.disableOverheadPrayers() else target.disablePrayers()
+            is Effect.StatDrain -> applyStatDrain(effect)
+            is Effect.Transmog -> cacheNpcType(effect.to)?.let { npc.bossTransmog(it, effect.durationTicks) }
+            is Effect.Headbar -> showHeadbar(effect)
+            is Effect.ClearHeadbar -> npc.removeHeadbar(effect.headbar.asRSCM(RSCMType.HEADBAR))
+            is Effect.HeadIcon -> npc.setHeadIcon(effect.slot, effect.graphic, effect.index)
+            is Effect.ClearHeadIcon -> npc.clearHeadIcon(effect.slot)
+            is Effect.LockMovement ->
+                npc.movementLocked = effect.locked || encounter.currentPhase?.lockMovement == true
+            is Effect.HealSelf -> {
+                val amount = evaluateVar(effect.amount)
+                if (amount > 0) npc.heal(amount, showHitsplat = true)
+            }
+            is Effect.Retire -> {
+                npc.mode = NpcMode.None
+                npc.clearInteraction()
+                npc.ignoreCombatInteractions = true
+                deps.encounterRegistry.ofOrNull(npc)?.invulnerable = true
+            }
+
+            is Effect.Teleport -> {
+                if (npc.isValidTarget()) {
+                    PathingEntityCommon.telejump(npc, deps.collision, resolveTile(effect.to))
+                }
+            }
+            is Effect.WalkTo -> {
+                if (npc.isValidTarget()) {
+                    val dest = resolveTile(effect.to)
+                    bossLogger.debug { "${npc.bossTag} walking to $dest from ${npc.coords}" }
+                    npc.walk(dest) {
+                        bossLogger.debug { "${npc.bossTag} arrived at ${npc.coords} (interrupted=$interrupted)" }
+                        if (npc.isValidTarget() && !interrupted) run(access, effect.onArrival)
+                    }
+                }
+            }
+            is Effect.FaceTarget -> {
+                if (npc.isValidTarget()) {
+                    npc.resetFaceEntity()
+                    if (target.isValidTarget()) npc.facePlayer(target)
+                }
+            }
+            is Effect.FaceTile -> {
+                if (npc.isValidTarget()) {
+                    npc.faceSquare(resolveTile(effect.at), instant = effect.instant)
+                    npc.resetFaceEntity()
+                }
+            }
+            is Effect.Transparency ->
+                npc.infoProtocol.setTransparency(
+                    effect.startCycle,
+                    effect.endCycle,
+                    effect.from,
+                    effect.to,
+                    useStartTransparency = true,
+                )
+
+            is Effect.Run -> {
+                bossLogger.debug { "${npc.bossTag} run: ${effect.ability}" }
+                val ability = spec.abilities[effect.ability]
+                if (ability != null) run(access, ability, onComplete) else onComplete()
+                return
+            }
+            is Effect.TransitionTo -> {
+                encounter.transitionTo(effect.phase, deps.mapClock.cycle)
+            }
+            is Effect.External -> {
+                bossLogger.debug { "${npc.bossTag} external: ${effect.handler}" }
+                val tile = effect.at?.let(::resolveTile)
+                deps.extensionRegistry.invoke(effect.handler, access, encounter.npc, target, effect.params, tile)
+            }
+
+            is Effect.Sequence -> {
+                runSequence(access, effect.effects, 0, onComplete)
+                return
+            }
+            is Effect.Parallel -> {
+                runParallel(access, effect.effects, onComplete)
+                return
+            }
+            is Effect.Choose -> {
+                val abilityName = encounter.pick(effect.selector, deps.mapClock.cycle, target)
+                val branch = abilityName?.let { effect.branches[it] }
+                if (branch != null) run(access, branch, onComplete) else onComplete()
+                return
+            }
+            is Effect.Repeat -> {
+                runRepeat(access, effect.times, effect.effect, effect.gap, onComplete)
+                return
+            }
+            is Effect.Whenever -> {
+                val holds = encounter.evaluate(effect.condition, target, tileScope(target), random = deps.random)
+                val next = if (holds) effect.then else effect.otherwise
+                run(access, next, onComplete)
+                return
+            }
+            is Effect.OnEach -> {
+                val targets = resolveMulti(effect.targets)
+                if (targets.isEmpty()) {
+                    onComplete()
+                    return
+                }
+                var remaining = targets.size
+                for (t in targets) {
+                    child(target = t).run(access, effect.effect) {
+                        remaining--
+                        if (remaining == 0) onComplete()
+                    }
+                }
+                return
+            }
+
+            is Effect.SetVarn -> encounter.npc.vars[effect.varn] = evaluateVar(effect.value)
+            is Effect.Switch -> {
+                val next = effect.cases[encounter.npc.vars[effect.varn]] ?: effect.otherwise
+                run(access, next, onComplete)
+                return
+            }
+            is Effect.Interrupt -> {
+                encounter.interrupt(deps.mapClock.cycle)
+                abilityRun.epoch = encounter.epoch
+            }
+            is Effect.OnTiles -> {
+                val tiles = resolveTiles(effect.tiles)
+                if (tiles.isEmpty()) {
+                    onComplete()
+                    return
+                }
+                var remaining = tiles.size
+                for (tile in tiles) {
+                    child(bindings = bindings.copy(currentTile = tile)).run(access, effect.effect) {
+                        remaining--
+                        if (remaining == 0) onComplete()
+                    }
+                }
+                return
+            }
+            is Effect.WithTile -> {
+                val tiles = bindings.tiles + (effect.name to resolveTile(effect.tile))
+                child(bindings = bindings.copy(tiles = tiles)).run(access, effect.effect, onComplete)
+                return
+            }
+            is Effect.WithTiles -> {
+                val sets = bindings.sets + (effect.name to resolveTiles(effect.tiles))
+                child(bindings = bindings.copy(sets = sets)).run(access, effect.effect, onComplete)
+                return
+            }
+            is Effect.After -> {
+                deps.worldQueues.add(effect.ticks) {
+                    val alive = npc.isSlotAssigned && npc.hitpoints > 0
+                    if (alive || !effect.requireAlive) run(access, effect.effect)
+                }
+            }
+            is Effect.SpawnLoc -> {
+                deps.spawnOwnedLoc(
+                    encounter,
+                    resolveTile(effect.at),
+                    effect.loc,
+                    if (effect.randomAngle) deps.random.of(LOC_ANGLES) else effect.angle,
+                    effect.blockPlayersOnly,
+                )
+            }
+            is Effect.Knockback -> knockback(effect)
+
+            is Effect.SetHp -> {
+                npc.copyStats(npc.visType)
+                val base = effect.base?.let(::evaluateVar) ?: npc.baseHitpointsLvl
+                npc.baseHitpointsLvl = base
+                npc.hitpoints = evaluateVar(effect.current).coerceIn(1, base.coerceAtLeast(1))
+            }
+            is Effect.DamageSelf -> damageSelf(evaluateVar(effect.amount))
+            is Effect.SetFocus -> {
+                val who = effect.who
+                if (who is TargetExpr.RandomPlayer) encounter.focusArea = who.area
+                encounter.focus = resolveSingle(who)
+                val focus = encounter.focus
+                if (actingAsBoss && focus != null) npc.apPlayer2(focus, deps.interactions)
+            }
+            is Effect.ClearFocus -> encounter.focus = null
+            is Effect.MessageParty -> messageParty(effect)
+            is Effect.Song -> {
+                val box = resolveArea(effect.area)
+                for (p in deps.playerList) {
+                    if (p.isValidTarget() && box.contains(p.coords)) p.midiSong(effect.id)
+                }
+            }
+            is Effect.ExactMove -> {
+                if (npc.isValidTarget()) {
+                    val start = npc.coords
+                    val end = resolveTile(effect.to)
+                    val cycles = effect.baseCycles + effect.perTile * start.chebyshevDistance(end)
+                    val engaged = (npc.interaction as? InteractionPlayer)?.target
+                    PathingEntityCommon.exactMove(
+                        npc,
+                        start,
+                        end,
+                        delay1 = 0,
+                        delay2 = cycles,
+                        dir = Angles.bearing(start, end),
+                        collision = deps.collision,
+                        viaTeleport = effect.teleport,
+                    )
+                    if (engaged != null && engaged.isValidTarget()) {
+                        npc.apPlayer2(engaged, deps.interactions)
+                    }
+                }
+            }
+            is Effect.ReplaceLoc -> deps.replaceOwnedLoc(encounter, resolveTile(effect.at), effect.loc)
+            is Effect.RemoveLoc -> deps.removeOwnedLoc(encounter, resolveTile(effect.at))
+            is Effect.TagTile -> encounter.tag(resolveTile(effect.at), effect.tag)
+            is Effect.UntagTile -> encounter.untag(resolveTile(effect.at), effect.tag)
+            is Effect.AsNpc -> {
+                val npcs = resolveNpcs(effect.who)
+                if (npcs.isEmpty()) {
+                    onComplete()
+                    return
+                }
+                var remaining = npcs.size
+                for (other in npcs) {
+                    asNpc(other).run(access, effect.effect) {
+                        remaining--
+                        if (remaining == 0) onComplete()
+                    }
+                }
+                return
+            }
+            is Effect.DespawnSelf -> if (npc.isSlotAssigned) deps.npcRepo.del(npc, Int.MAX_VALUE)
+        }
+        onComplete()
+    }
+
+    private fun damageSelf(amount: Int) {
+        val dealt = amount.coerceAtMost(npc.hitpoints)
+        if (dealt <= 0) return
+        npc.hitpoints = (npc.hitpoints - dealt).coerceAtLeast(1)
+        val hitmark = "hitmark.regular_damage_lit".asRSCM(RSCMType.HITMARK)
+        npc.showHitmark(
+            Hitmark.fromNoSource(self = hitmark, source = hitmark, public = hitmark, damage = dealt, delay = 0)
+        )
+    }
+
+    private fun messageParty(effect: Effect.MessageParty) {
+        val focus = focusPlayer()
+        val box = resolveArea(effect.area)
+        for (p in deps.playerList) {
+            if (!p.isValidTarget() || !box.contains(p.coords)) continue
+            p.mes(if (p === focus) effect.self else effect.others.replace("{name}", focus?.displayName.orEmpty()))
+        }
+    }
+
+    private fun evaluateVar(expr: VarExpr): Int =
+        when (expr) {
+            is VarExpr.Const -> expr.value
+            is VarExpr.Now -> deps.mapClock.cycle
+            is VarExpr.Varn -> encounter.npc.vars[expr.varn]
+            is VarExpr.HitDamage -> hitDamage
+            is VarExpr.Hp -> npc.hitpoints
+            is VarExpr.BaseHp -> npc.baseHitpointsLvl
+            is VarExpr.Minus -> evaluateVar(expr.a) - evaluateVar(expr.b)
+            is VarExpr.Plus -> evaluateVar(expr.a) + evaluateVar(expr.b)
+            is VarExpr.Min -> minOf(evaluateVar(expr.a), evaluateVar(expr.b))
+            is VarExpr.Max -> maxOf(evaluateVar(expr.a), evaluateVar(expr.b))
+            is VarExpr.DistanceToFootprint -> footprintDistance(npc, resolveTile(expr.tile))
+            is VarExpr.BearingTo -> Angles.bearing(resolveTile(expr.from), resolveTile(expr.to))
+            is VarExpr.Manhattan -> {
+                val a = resolveTile(expr.a)
+                val b = resolveTile(expr.b)
+                abs(a.x - b.x) + abs(a.z - b.z)
+            }
+        }
+
+    private fun showHeadbar(effect: Effect.Headbar) {
+        val bar =
+            checkNotNull(ServerCacheManager.getHealthBar(effect.headbar.asRSCM(RSCMType.HEADBAR))) {
+                "Headbar type not found: ${effect.headbar}"
+            }
+        val from = bar.segments * effect.fromPercent / 100
+        val to = bar.segments * effect.toPercent / 100
+        npc.showHeadbar(EngineHeadbar.fromNoSource(bar.id, bar.id, from, to, 0, effect.cycles))
+    }
+
+    private fun scheduleWait(ticks: Int, onComplete: () -> Unit) {
+        require(ticks > 0) { "`ticks` must be greater than 0. (ticks=$ticks)" }
+        if (actingAsBoss) deps.suppressAttacks(npc, ticks)
+        deps.worldQueues.add(ticks) { if (npc.isValidTarget() && !interrupted) onComplete() }
+    }
+
+    private fun runSequence(
+        access: StandardNpcAccess?,
+        effects: List<Effect>,
+        index: Int,
+        onComplete: () -> Unit,
+    ) {
+        if (index >= effects.size) {
+            onComplete()
+            return
+        }
+        run(access, effects[index]) { runSequence(access, effects, index + 1, onComplete) }
+    }
+
+    private fun runParallel(access: StandardNpcAccess?, effects: List<Effect>, onComplete: () -> Unit) {
+        if (effects.isEmpty()) {
+            onComplete()
+            return
+        }
+        var remaining = effects.size
+        for (e in effects) {
+            run(access, e) {
+                remaining--
+                if (remaining == 0) onComplete()
+            }
+        }
+    }
+
+    private fun runRepeat(
+        access: StandardNpcAccess?,
+        times: IntRange,
+        effect: Effect,
+        gap: Int,
+        onComplete: () -> Unit,
+    ) {
+        fun step(remaining: Int) {
+            if (remaining <= 0) {
+                onComplete()
+                return
+            }
+            run(access, effect) {
+                if (remaining > 1 && gap > 0) {
+                    deps.worldQueues.add(gap) { if (!interrupted) step(remaining - 1) }
+                } else {
+                    step(remaining - 1)
+                }
+            }
+        }
+        step(deps.random.of(times))
+    }
+
+    private fun applyHit(access: StandardNpcAccess?, hit: Effect.Hit) {
+        val targets = when (val t = hit.target) {
+            is TargetExpr.Single -> listOfNotNull(resolveSingle(t))
+            is TargetExpr.Multi -> resolveMulti(t)
+            else -> listOf(target)
+        }
+        val delay = hit.delay.coerceAtLeast(1)
+        for (t in targets) {
+            val damage = rollDamage(hit, t)
+            org.rsmod.game.debug.AkkhaTrace.hit(npc, t.coords, damage) // TEMP-AKKHA-TRACE
+            if (damage > 0) {
+                hit.spotanim?.let {
+                    t.spotanim(it, delay = hit.spotanimDelay ?: 0, height = hit.spotanimHeight, slot = hit.spotanimSlot)
+                }
+            }
+            if (hit.hazard) {
+                t.queueHit(npc, delay, hit.type.toEngine(), damage, deps.playerHitModifier)
+                continue
+            }
+            if (hit.resolveOnImpact) {
+                t.queueCombatRetaliate(npc, delay)
+                t.queueImpactHit(
+                    npc,
+                    delay,
+                    hit.type.toEngine(),
+                    damage,
+                    impactModifier(access, hit, damage),
+                    penetration = if (hit.penetrationWhen != null) 0 else hit.penetration,
+                )
+                showMissSpotanim(hit, t, damage, clientDelay = 0)
+                continue
+            }
+            if (hit.reactOnLanding) {
+                val landed = t.finishNpcHitOnLanding(npc, delay, hit.type.toEngine(), damage, hit.penetration)
+                scheduleLanding(access, hit, t, damage, landed, delay, clientDelay = 0)
+                continue
+            }
+            if (!hit.react) {
+                val type = hit.type.toEngine()
+                val queued = t.queueHit(npc, delay, type, damage, deps.playerHitModifier, penetration = hit.penetration)
+                scheduleLanding(access, hit, t, damage, queued.damage, delay, clientDelay = 0)
+                continue
+            }
+            val landed =
+                t.finishNpcHit(npc, delay, hit.type.toEngine(), damage, deps.playerHitModifier, hit.penetration)
+            scheduleLanding(access, hit, t, damage, landed.damage, delay, clientDelay = 0)
+        }
+    }
+
+    private fun rollDamage(hit: Effect.Hit, t: Player): Int {
+        val damage = evaluateDamage(hit.damage, hit.type, t)
+        val dragonfire = dragonfireType(hit.type) ?: return damage
+        val max = damageMax(hit.damage, hit.type, t)
+        val cap = DragonfireProtection.resolveMaxHit(t, dragonfire, max)
+        return if (cap <= 0) 0 else deps.random.of(cap + 1)
+    }
+
+    private fun impactTicks(anim: ProjAnim, rounding: ImpactRounding): Int =
+        when (rounding) {
+            ImpactRounding.Down -> anim.serverCycles
+            ImpactRounding.Up -> ceilingImpactTicks(anim.endTime)
+        }
+
+    private fun projAnimType(proj: Effect.Projectile): ProjAnimType {
+        proj.travel?.let {
+            return ServerCacheManager.getProjectile(it.asRSCM(RSCMType.PROJANIM))
+                ?: error("Projectile not found: $it")
+        }
+        val cfg = proj.config ?: ProjectileConfig()
+        return ProjAnimType(
+            startHeight = cfg.startHeight,
+            endHeight = cfg.endHeight,
+            delay = cfg.startDelay,
+            angle = cfg.angle,
+            lengthAdjustment = cfg.travelTime,
+            progress = cfg.progress,
+            stepMultiplier = cfg.stepMultiplier,
+        )
+    }
+
+    private fun buildProjAnim(
+        proj: Effect.Projectile,
+        type: ProjAnimType,
+        spotanim: Int,
+        player: Player?,
+        dest: CoordGrid,
+    ): ProjAnim {
+        val from = proj.from?.let(::resolveTile)
+        if (from == null) {
+            return if (player != null) {
+                ProjAnim.fromNpcToPlayer(npc, player, spotanim, type)
+            } else {
+                ProjAnim.fromNpcToCoord(npc, dest, spotanim, type)
+            }
+        }
+        return ProjAnim(
+            spotanim = spotanim,
+            startHeight = type.startHeight,
+            endHeight = type.endHeight,
+            startTime = type.delay,
+            endTime = ProjAnim.calculateEndTime(type, Bounds(from).distanceTo(Bounds(dest))),
+            angle = type.angle,
+            progress = type.progress,
+            sourceIndex = 0,
+            targetIndex = player?.let { -(it.slotId + 1) } ?: 0,
+            startCoord = from,
+            endCoord = dest,
+        )
+    }
+
+    private fun shapeFlight(anim: ProjAnim, type: ProjAnimType, cfg: ProjectileConfig?): ProjAnim {
+        if (cfg == null) return anim
+        var end = anim.endTime
+        if (cfg.originDistance) {
+            val dx = abs(anim.startCoord.x - anim.endCoord.x)
+            val dz = abs(anim.startCoord.z - anim.endCoord.z)
+            end = ProjAnim.calculateEndTime(type, maxOf(dx, dz))
+        }
+        end = maxOf(end, cfg.minFlight)
+        return if (end == anim.endTime) anim else anim.copy(endTime = end)
+    }
+
+    private fun fireProjectile(access: StandardNpcAccess?, proj: Effect.Projectile) {
+        val targetExpr = proj.target as? TargetExpr.Single ?: TargetExpr.CurrentTarget
+        val player = resolveSingle(targetExpr)
+        val destCoord = player?.coords ?: resolveTile(targetExpr)
+        val type = projAnimType(proj)
+
+        proj.launch?.let { npc.spotanim(it) }
+
+        val spotanimId = proj.spotanim.asRSCM(RSCMType.SPOTANIM)
+        val projAnim =
+            shapeFlight(buildProjAnim(proj, type, spotanimId, player, destCoord), type, proj.config)
+        deps.worldRepo.projAnim(projAnim)
+        val ticks = impactTicks(projAnim, proj.impactRounding)
+
+        proj.impact?.let { impactSpot ->
+            val spot = SpotanimType(impactSpot.asRSCM(RSCMType.SPOTANIM))
+            val wholeTicks = projAnim.endTime / CLIENT_CYCLES_PER_TICK
+            val remainder = projAnim.endTime % CLIENT_CYCLES_PER_TICK
+            if (wholeTicks == 0) {
+                deps.worldRepo.spotanimMap(spot, destCoord, delay = remainder)
+            } else {
+                deps.worldQueues.add(wholeTicks) {
+                    deps.worldRepo.spotanimMap(spot, destCoord, delay = remainder)
+                }
+            }
+        }
+
+        proj.onImpact?.let { onImpact ->
+            queueFromBoss((ticks - proj.impactLead).coerceAtLeast(1)) {
+                child(bindings = bindings.copy(impactTile = destCoord)).run(access, onImpact)
+            }
+        }
+
+        val hit = proj.hit ?: return
+        if (player == null) return
+        val damage = rollDamage(hit, player)
+        if (damage > 0 && !hit.spotanimUnlessPraying) {
+            val delay = hit.spotanimDelay ?: projAnim.clientCycles
+            hit.spotanim?.let {
+                player.spotanim(it, delay = delay, height = hit.spotanimHeight, slot = hit.spotanimSlot)
+            }
+        }
+        if (proj.resolveOnImpact) {
+            val conditionalPenetration = hit.penetrationWhen != null
+            player.queueCombatRetaliate(npc, ticks)
+            player.queueImpactHit(
+                npc,
+                ticks,
+                hit.type.toEngine(),
+                damage,
+                impactModifier(access, hit, damage),
+                penetration = if (conditionalPenetration) 0 else hit.penetration,
+            )
+            showMissSpotanim(hit, player, damage, projAnim.clientCycles)
+            return
+        }
+        val hitType = hit.type.toEngine()
+        if (hit.reactOnLanding) {
+            val landed = player.finishNpcHitOnLanding(npc, ticks, hitType, damage, hit.penetration)
+            scheduleLanding(access, hit, player, damage, landed, ticks, projAnim.clientCycles)
+            return
+        }
+        val landed =
+            player.finishNpcHit(npc, ticks, hitType, damage, deps.playerHitModifier, hit.penetration).damage
+        scheduleLanding(access, hit, player, damage, landed, ticks, projAnim.clientCycles)
+    }
+
+    private fun Player.finishNpcHitOnLanding(
+        source: Npc,
+        delay: Int,
+        type: HitType,
+        damage: Int,
+        penetration: Int,
+    ): Int {
+        queueCombatRetaliate(source, delay)
+        val hit = queueHit(source, delay, type, damage, deps.playerHitModifier, penetration = penetration)
+        if (delay <= 2) {
+            combatPlayDefendAnim()
+        } else {
+            deps.worldQueues.add(delay - 2) { if (isValidTarget()) combatPlayDefendAnim() }
+        }
+        return hit.damage
+    }
+
+    /** Resolves prayer, penetration, the defend anim and lifesteal/on-hit on the impact tick. */
+    private fun impactModifier(
+        access: StandardNpcAccess?,
+        hit: Effect.Hit,
+        rolled: Int,
+    ): PlayerHitModifier {
+        val onHit = landingEffect(hit, rolled)
+        return PlayerHitModifier { t ->
+            val whenever = hit.penetrationWhen
+            if (whenever != null && encounter.evaluate(whenever, t, tileScope(t))) {
+                penetration = hit.penetration
+            }
+            val praying = encounter.evaluate(Condition.TargetPraying(hit.type), t)
+            deps.playerHitModifier.modify(this, t)
+            t.combatPlayDefendAnim()
+            if (hit.spotanimUnlessPraying && !praying) {
+                hit.spotanim?.let { t.spotanim(it, height = hit.spotanimHeight, slot = hit.spotanimSlot) }
+            }
+            if (!npc.isValidTarget()) return@PlayerHitModifier
+            val heal = damage * hit.lifesteal / 100
+            if (heal > 0) npc.heal(heal)
+            onHit?.let { child(target = t, hitDamage = damage).run(access, it) }
+        }
+    }
+
+    /**
+     * Schedules a hit's landing extras: the miss graphic (sent now with a client delay, like
+     * [Effect.Hit.spotanim]), and [Effect.Hit.onHit] / [Effect.Hit.lifesteal] once the hit lands.
+     */
+    private fun scheduleLanding(
+        access: StandardNpcAccess?,
+        hit: Effect.Hit,
+        t: Player,
+        rolled: Int,
+        landed: Int,
+        serverDelay: Int,
+        clientDelay: Int,
+    ) {
+        showMissSpotanim(hit, t, rolled, clientDelay)
+        val onHit = landingEffect(hit, rolled)
+        val heal = landed * hit.lifesteal / 100
+        if (onHit == null && heal <= 0) return
+        if (hit.onHitNow) {
+            if (!npc.isValidTarget()) return
+            if (heal > 0) npc.heal(heal)
+            onHit?.let { child(hitDamage = landed).run(access, it) }
+            return
+        }
+        deps.worldQueues.add(serverDelay) {
+            if (!npc.isValidTarget()) return@add
+            if (heal > 0) npc.heal(heal)
+            onHit?.let { child(hitDamage = landed).run(access, it) }
+        }
+    }
+
+    /**
+     * Runs [block] after [delay] ticks, for effects that hit players as the boss. The boss npc can be
+     * removed while a projectile or attack is still in flight (the fight ends, the instance closes);
+     * building a hit from a removed npc throws, and an uncaught exception here stops the server. So a
+     * removed boss skips the effect, and any other failure is logged instead of escaping.
+     */
+    private fun queueFromBoss(delay: Int, block: () -> Unit) {
+        deps.worldQueues.add(delay) {
+            if (!npc.isSlotAssigned) return@add
+            try {
+                block()
+            } catch (e: Exception) {
+                bossLogger.error(e) { "Delayed boss effect failed (${npc.bossTag})" }
+            }
+        }
+    }
+
+    private fun landingEffect(hit: Effect.Hit, rolled: Int): Effect? =
+        hit.onHit?.takeIf { hit.onHitEvenOnMiss || rolled > 0 }
+
+    private fun showMissSpotanim(hit: Effect.Hit, t: Player, rolled: Int, clientDelay: Int) {
+        if (rolled <= 0) {
+            hit.missSpotanim?.let { t.spotanim(it, delay = clientDelay, height = hit.spotanimHeight) }
+            hit.missSound?.let { t.soundSynth(it, 1, clientDelay) }
+        }
+    }
+
+    private fun applyTileAoE(aoe: Effect.TileAoE) {
+        val tiles = aoe.tiles(npc, target).toSet()
+        val windup = aoe.telegraph?.windup ?: 0
+        aoe.telegraph?.let { telegraph ->
+            val spot = SpotanimType(telegraph.spotanim.asRSCM(RSCMType.SPOTANIM))
+            for (tile in tiles) deps.worldRepo.spotanimMap(spot, tile)
+        }
+        val strike = {
+            val targets = deps.playerList.filter { it.coords in tiles }
+            for (t in targets) {
+                val damage = evaluateDamage(aoe.damage, aoe.type, t)
+                t.finishNpcHit(npc, 1, aoe.type.toEngine(), damage, deps.playerHitModifier)
+            }
+        }
+        if (windup > 0) queueFromBoss(windup) { strike() } else strike()
+    }
+
+    private fun applyBleed(access: StandardNpcAccess?, bleed: Effect.Bleed) {
+        PlayerBleed.apply(
+            owner = npc,
+            player = target,
+            duration = bleed.duration,
+            stillInterval = bleed.stillInterval,
+            onApply = { player ->
+                if (npc.isValidTarget()) {
+                    bleed.applyDamage?.let { bleedHit(player, it, bleed.hitmark) }
+                    bleed.onApply?.let { EffectInterpreter(npc, player, spec, encounter, deps).run(access, it) }
+                }
+            },
+            onStill = { player ->
+                if (npc.isValidTarget()) bleed.stillDamage?.let { bleedHit(player, it, bleed.hitmark) }
+            },
+            onMoving = { player ->
+                if (npc.isValidTarget()) {
+                    bleedHit(player, bleed.movingDamage, bleed.hitmark)
+                    bleed.onMovingHit?.let { EffectInterpreter(npc, player, spec, encounter, deps).run(access, it) }
+                }
+            },
+        )
+    }
+
+    private fun bleedHit(player: Player, expr: DamageExpr, hitmark: HitmarkTypeGroup) {
+        val damage = evaluateDamage(expr, BossHitType.Typeless, player)
+        player.queueHit(
+            delay = 1,
+            type = HitType.Typeless,
+            damage = damage,
+            modifier = NoopPlayerHitModifier,
+            hitmark = hitmark,
+        )
+    }
+
+    private fun applyDebris(effect: Effect.Debris) {
+        val center = resolveTile(effect.center)
+        val telegraphSpot = SpotanimType(effect.telegraph.asRSCM(RSCMType.SPOTANIM))
+
+        val playersInRange =
+            deps.playerList.filter { it.coords.chebyshevDistance(center) <= effect.targetRadius }
+        val total = effect.count.first + deps.random.of(effect.count.last - effect.count.first + 1)
+        val scatterCount = (total - playersInRange.size).coerceAtLeast(0)
+        val scatterDiameter = effect.scatterRadius * 2 + 1
+        val tiles =
+            playersInRange.map { it.coords } +
+                List(scatterCount) {
+                    center.translate(
+                        deps.random.of(scatterDiameter) - effect.scatterRadius,
+                        deps.random.of(scatterDiameter) - effect.scatterRadius,
+                    )
+                }
+        val tileSet = tiles.toSet()
+
+        tiles.forEach { deps.worldRepo.spotanimMap(telegraphSpot, it) }
+
+        queueFromBoss(effect.windup) {
+            effect.impact?.let { impact ->
+                val impactSpot = SpotanimType(impact.asRSCM(RSCMType.SPOTANIM))
+                tileSet.forEach { deps.worldRepo.spotanimMap(impactSpot, it) }
+            }
+            val landing =
+                deps.playerList.filter { it.coords.chebyshevDistance(center) <= effect.targetRadius }
+            for (player in landing) {
+                if (player.hitpoints > 0 && player.coords in tileSet) {
+                    val damage = evaluateDamage(effect.damage, effect.type, player)
+                    player.finishNpcHit(npc, 1, effect.type.toEngine(), damage, deps.playerHitModifier)
+                }
+            }
+        }
+    }
+
+    private fun summon(access: StandardNpcAccess?, summon: Effect.Summon) {
+        val npcTypeId = summon.npc.asRSCM(RSCMType.NPC)
+        val npcType = ServerCacheManager.getNpc(npcTypeId) ?: return
+        val center = resolveTile(summon.centeredOn)
+        val radius = summon.radius
+        val mode = summon.mode ?: npcType.defaultMode
+
+        // Only consider tiles that are walkable
+        val spawnTiles =
+            buildList {
+                    for (dx in -radius..radius) {
+                        for (dz in -radius..radius) {
+                            val origin = center.translate(dx, dz)
+                            if (canStand(origin, npcType.size)) {
+                                add(origin)
+                            }
+                        }
+                    }
+                }
+                .toMutableList()
+
+        repeat(summon.count) {
+            val spawnCoord =
+                if (spawnTiles.isNotEmpty()) {
+                    spawnTiles.removeAt(deps.random.of(spawnTiles.size))
+                } else {
+                    center
+                }
+            val spawned = Npc(npcType, spawnCoord)
+            spawned.mode = mode
+            deps.npcRepo.add(spawned, summon.duration)
+            if (summon.owned) encounter.addOwnedNpc(spawned)
+            summon.behaviour?.let { asNpc(spawned).run(access, it) }
+            summon.onSummon?.let { handler ->
+                deps.extensionRegistry.invoke(handler, access, spawned, target, summon.onSummonParams)
+            }
+        }
+    }
+
+    /** Whether an npc of [size] can stand at [origin]. */
+    private fun canStand(origin: CoordGrid, size: Int): Boolean {
+        for (dx in 0 until size) {
+            for (dz in 0 until size) {
+                if (deps.collision.isWalkBlocked(origin.translate(dx, dz))) {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    private fun applyMessage(effect: Effect.Message) {
+        for (t in resolvePlayers(effect.target)) {
+            t.mes(effect.text)
+        }
+    }
+
+    private fun resolvePlayers(expr: TargetExpr): List<Player> =
+        when (expr) {
+            is TargetExpr.Single -> listOfNotNull(resolveSingle(expr))
+            is TargetExpr.Multi -> resolveMulti(expr)
+        }
+
+    private fun applyPoison(effect: Effect.Poison) {
+        if (deps.random.of(effect.outOf) < effect.chance) {
+            CombatEffects.poison(target, effect.damage)
+        }
+    }
+
+    private fun applyFreeze(effect: Effect.Freeze) {
+        if (deps.random.of(effect.outOf) < effect.chance) {
+            CombatEffects.freeze(target, effect.ticks)
+        }
+    }
+
+    private fun applyStatDrain(effect: Effect.StatDrain) {
+        for (entry in effect.entries) {
+            if (deps.random.of(entry.outOf) < entry.chance) {
+                if (entry.percent == 0) {
+                    CombatEffects.statDrain(target, listOf(entry.stat), entry.amount)
+                } else {
+                    target.statDrain(entry.stat, entry.amount, entry.percent)
+                }
+            }
+        }
+    }
+
+    private class TileBox(val sw: CoordGrid, val ne: CoordGrid) {
+        fun contains(tile: CoordGrid): Boolean =
+            tile.level == sw.level && tile.x in sw.x..ne.x && tile.z in sw.z..ne.z
+    }
+
+    private fun resolveArea(area: Area): TileBox = TileBox(resolveTile(area.sw), resolveTile(area.ne))
+
+    private fun isFree(box: TileBox, tile: CoordGrid): Boolean =
+        box.contains(tile) && !deps.collision.isWalkBlocked(tile) && !encounter.ownsLocAt(tile)
+
+    private fun resolveTiles(set: TileSet): List<CoordGrid> {
+        return when (set) {
+            is TileSet.RandomFree -> {
+                val box = resolveArea(set.area)
+                val free = buildList {
+                    for (x in box.sw.x..box.ne.x) {
+                        for (z in box.sw.z..box.ne.z) {
+                            val tile = CoordGrid(x, z, box.sw.level)
+                            if (isFree(box, tile)) add(tile)
+                        }
+                    }
+                }
+                free.shuffled().take(deps.random.of(set.count))
+            }
+            is TileSet.UnderPlayers -> {
+                val box = resolveArea(set.area)
+                deps.playerList
+                    .filter { it.isValidTarget() && box.contains(it.coords) }
+                    .map { it.coords }
+                    .filter { isFree(box, it) }
+            }
+            is TileSet.Nearest -> {
+                val box = resolveArea(set.area)
+                set.tiles.mapNotNull { nearestFree(box, resolveTile(it), set.searchRadius) }
+            }
+            is TileSet.Custom -> {
+                val box = resolveArea(set.area)
+                set.tiles(npc, target, deps.random).filter { isFree(box, it) }.distinct()
+            }
+            is TileSet.CustomAt -> {
+                val box = resolveArea(set.area)
+                set.tiles(npc, resolveTile(set.at), deps.random).filter { isFree(box, it) }.distinct()
+            }
+            is TileSet.Plus -> (resolveTiles(set.a) + resolveTiles(set.b)).distinct()
+            is TileSet.Minus -> {
+                val excluded = resolveTiles(set.b).toSet()
+                resolveTiles(set.a).filter { it !in excluded }
+            }
+            is TileSet.Take -> takeRandom(resolveTiles(set.tiles), set.count, deps.random)
+            is TileSet.Bound -> bindings.set(set.name)
+            is TileSet.OwnedLocs -> encounter.ownedLocTiles(set.loc)
+            is TileSet.Tagged -> encounter.taggedTiles(set.tag)
+        }
+    }
+
+    private fun nearestFree(box: TileBox, tile: CoordGrid, searchRadius: Int): CoordGrid? {
+        if (isFree(box, tile)) return tile
+        for (radius in 1..searchRadius) {
+            for (dx in -radius..radius) {
+                for (dz in -radius..radius) {
+                    if (maxOf(abs(dx), abs(dz)) != radius) continue
+                    val candidate = tile.translate(dx, dz)
+                    if (isFree(box, candidate)) return candidate
+                }
+            }
+        }
+        return null
+    }
+
+    private fun knockback(effect: Effect.Knockback) {
+        val box = resolveArea(effect.within)
+        val from = target.coords
+        val dest =
+            KNOCKBACK_DIRECTIONS.shuffled()
+                .map { (dx, dz) -> from.translate(dx, dz) }
+                .firstOrNull { isFree(box, it) } ?: return
+        target.anim(effect.anim)
+        PathingEntityCommon.teleport(target, deps.collision, dest)
+        target.pendingExactMove =
+            EntityExactMove(
+                deltaX1 = from.x - dest.x,
+                deltaZ1 = from.z - dest.z,
+                deltaX2 = 0,
+                deltaZ2 = 0,
+                clientDelay1 = 0,
+                clientDelay2 = 30,
+                direction = Angles.bearing(dest, from),
+            )
+    }
+
+    private fun resolveSingle(expr: TargetExpr.Single): Player? {
+        return when (expr) {
+            is TargetExpr.CurrentTarget -> target
+            is TargetExpr.Self -> null
+            is TargetExpr.CurrentTargetTile -> null
+            is TargetExpr.HighestDamageDealer -> target
+            is TargetExpr.LowestPrayer -> target
+            is TargetExpr.RandomNearby -> target
+            is TargetExpr.RandomWalkableTile -> null
+            is TargetExpr.ImpactTile -> null
+            is TargetExpr.CurrentTile -> null
+            is TargetExpr.SpawnTile -> null
+            is TargetExpr.Centre -> null
+            is TargetExpr.Toward -> null
+            is TargetExpr.Offset -> null
+            is TargetExpr.Custom -> null
+            is TargetExpr.Bound -> null
+            is TargetExpr.RandomOfBound -> null
+            is TargetExpr.Focus -> focusPlayer()
+            is TargetExpr.RandomPlayer -> randomPlayerIn(expr.area)
+            is TargetExpr.NearestPlayer -> nearestPlayerIn(expr.area)
+        }
+    }
+
+    private fun nearestPlayerIn(area: Area): Player? {
+        val box = resolveArea(area)
+        return deps.playerList
+            .filter { it.isValidTarget() && box.contains(it.coords) }
+            .minWithOrNull(
+                compareBy<Player> { footprintDistance(npc, it.coords) }.thenBy { it.slotId }
+            )
+    }
+
+    private fun resolveTile(expr: TargetExpr.Single): CoordGrid =
+        npc.resolveTile(expr, target, bindings, deps.random, ::randomWalkableTile, ::playerOf)
+
+    private fun randomWalkableTile(center: CoordGrid, radius: Int): CoordGrid? {
+        val candidates = mutableListOf<CoordGrid>()
+        for (dx in -radius..radius) {
+            for (dz in -radius..radius) {
+                val coord = center.translate(dx, dz)
+                if (!deps.collision.isWalkBlocked(coord)) candidates += coord
+            }
+        }
+        if (candidates.isEmpty()) return null
+        return candidates[deps.random.of(candidates.size)]
+    }
+
+    private fun resolveMulti(expr: TargetExpr): List<Player> {
+        return when (expr) {
+            is TargetExpr.AllInRadius -> {
+                if (expr.of is TargetExpr.Self) {
+                    deps.playerList.filter {
+                        it.coords.level == npc.coords.level && npc.isWithinDistance(it, expr.radius)
+                    }
+                } else {
+                    val center = resolveTile(expr.of)
+                    deps.playerList.filter {
+                        it.coords.level == center.level &&
+                            it.coords.chebyshevDistance(center) <= expr.radius
+                    }
+                }
+            }
+            is TargetExpr.TopN -> listOf(target)
+            is TargetExpr.FacingQuadrant -> playersInFacingQuadrant(expr.reach)
+            is TargetExpr.PlayersIn -> {
+                val area = resolveArea(expr.area)
+                deps.playerList.filter { it.isValidTarget() && area.contains(it.coords) }
+            }
+            is TargetExpr.PlayersInExcept -> {
+                val area = resolveArea(expr.area)
+                val all = deps.playerList.filter { it.isValidTarget() && area.contains(it.coords) }
+                val except = resolveSingle(expr.except)
+                val others = all.filter { it !== except }
+                others.ifEmpty { all }
+            }
+            is TargetExpr.PlayersOn -> {
+                val tile = resolveTile(expr.tile)
+                deps.playerList.filter { it.isValidTarget() && it.coords == tile }
+            }
+            is TargetExpr.Single -> listOfNotNull(resolveSingle(expr))
+            else -> listOf(target)
+        }
+    }
+
+    private fun playersInFacingQuadrant(reach: Int): List<Player> {
+        val half = npc.size / 2
+        val centreX = npc.coords.x + half
+        val centreZ = npc.coords.z + half
+        val targetDx = target.coords.x - centreX
+        val targetDz = target.coords.z - centreZ
+        if (targetDx == 0 && targetDz == 0) return emptyList()
+
+        val vertical = abs(targetDz) >= abs(targetDx)
+        val sign = if (vertical) targetDz.sign else targetDx.sign
+        val limit = half + reach
+        return deps.playerList.filter { player ->
+            if (player.coords.level != npc.coords.level) return@filter false
+            val dx = player.coords.x - centreX
+            val dz = player.coords.z - centreZ
+            if (abs(dx) > limit || abs(dz) > limit) return@filter false
+            val (along, across) = if (vertical) dz to dx else dx to dz
+            along * sign > 0 && abs(across) <= abs(along)
+        }
+    }
+
+    private fun damageMax(expr: DamageExpr, hitType: BossHitType, t: Player): Int =
+        when (expr) {
+            is DamageExpr.Roll -> if (expr.range.isEmpty()) 0 else expr.range.last
+            is DamageExpr.Fixed -> expr.value
+            is DamageExpr.NpcMaxHit -> npcFormulaMaxHit(expr, hitType, t)
+            else -> evaluateDamage(expr, hitType, t)
+        }
+
+    private fun npcFormulaMaxHit(expr: DamageExpr.NpcMaxHit, hitType: BossHitType, t: Player): Int {
+        val raw =
+            when (hitType) {
+                BossHitType.Ranged -> deps.maxHit.getRangedMaxHit(npc, t)
+                BossHitType.Magic,
+                BossHitType.Dragonfire,
+                BossHitType.DragonfireMetal,
+                BossHitType.WyvernIce -> deps.maxHit.getMagicMaxHit(npc, t)
+                BossHitType.Melee,
+                BossHitType.Typeless -> deps.maxHit.getMeleeMaxHit(npc, t, expr.meleeAttackType)
+            }
+        val scaled = if (expr.scale == 1.0) raw else (raw * expr.scale).toInt()
+        return scaled.coerceAtLeast(0)
+    }
+
+    private fun dragonfireType(t: BossHitType): DragonfireProtection.DragonfireType? =
+        when (t) {
+            BossHitType.Dragonfire -> DragonfireProtection.DragonfireType.Chromatic
+            BossHitType.DragonfireMetal -> DragonfireProtection.DragonfireType.Metal
+            BossHitType.WyvernIce -> DragonfireProtection.DragonfireType.WyvernIce
+            else -> null
+        }
+
+    private fun evaluateDamage(expr: DamageExpr, hitType: BossHitType, t: Player): Int {
+        return when (expr) {
+            is DamageExpr.Fixed -> expr.value
+            is DamageExpr.Roll ->
+                if (expr.range.isEmpty()) 0
+                else {
+                    expr.range.first + deps.random.of(expr.range.last - expr.range.first + 1)
+                }
+            is DamageExpr.Accuracy -> {
+                val landed =
+                    if (expr.kind == AccuracyKind.MagicalRanged) {
+                        deps.accuracy.rollMagicalRangedAccuracy(npc, t, deps.random)
+                    } else {
+                        rollAccuracy(hitType, t, expr.meleeAttackType)
+                    }
+                evaluateDamage(if (landed) expr.on else expr.miss, hitType, t)
+            }
+            is DamageExpr.NpcMaxHit -> {
+                val max = npcFormulaMaxHit(expr, hitType, t)
+                val lo = expr.minHit.coerceIn(0, max)
+                if (max <= 0) 0 else lo + deps.random.of(max - lo + 1)
+            }
+            is DamageExpr.PercentOfTargetHp -> (t.hitpoints * expr.fraction).toInt()
+            is DamageExpr.Custom -> expr.roll(npc, t)
+            is DamageExpr.Min -> minOf(evaluateDamage(expr.a, hitType, t), evaluateDamage(expr.b, hitType, t))
+            is DamageExpr.Max -> maxOf(evaluateDamage(expr.a, hitType, t), evaluateDamage(expr.b, hitType, t))
+        }
+    }
+
+    private fun rollAccuracy(
+        hitType: BossHitType,
+        t: Player,
+        meleeAttackType: MeleeAttackType? = null,
+    ): Boolean =
+        when (hitType) {
+            BossHitType.Melee -> deps.accuracy.rollMeleeAccuracy(npc, t, meleeAttackType, deps.random)
+            BossHitType.Ranged -> deps.accuracy.rollRangedAccuracy(npc, t, deps.random)
+            BossHitType.Magic,
+            BossHitType.Dragonfire,
+            BossHitType.DragonfireMetal,
+            BossHitType.WyvernIce -> deps.accuracy.rollMagicAccuracy(npc, t, deps.random)
+            BossHitType.Typeless -> true
+        }
+
+    private companion object {
+        // UNVERIFIED: the range (the client's view distance; live only shows the target leaving).
+        private const val SOUND_TO_RANGE = 15
+        private const val LOC_ANGLES = 4
+
+        private val KNOCKBACK_DIRECTIONS =
+            listOf(0 to 1, 1 to 0, 0 to -1, -1 to 0, 1 to 1, 1 to -1, -1 to -1, -1 to 1)
+    }
+}

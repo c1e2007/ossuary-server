@@ -1,0 +1,8 @@
+[gamevals.interface]
+tester_hub = 1110
+
+[gamevals.clientscript]
+tester_hub_init = 45560
+
+[gamevals.timer]
+tester_shop = 65091

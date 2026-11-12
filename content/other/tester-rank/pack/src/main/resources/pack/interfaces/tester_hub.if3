@@ -1,0 +1,560 @@
+[[interface]]
+name = "interface.tester_hub"
+width = 512
+height = 334
+on_load = ["clientscript.tester_hub_init", "component.tester_hub:border"]
+
+[[component]]
+name = "border"
+type = "layer"
+width = 512
+height = 334
+no_click_through = true
+
+[[component]]
+name = "content"
+type = "layer"
+x = 10
+y = 36
+width = 492
+height = 288
+
+[[component]]
+name = "h_tp"
+type = "text"
+parent = "content"
+x = 0
+y = 0
+width = 236
+height = 18
+text = "Teleports"
+font = "bold"
+h_align = "left"
+v_align = "center"
+color = "#FF981F"
+text_shadow = true
+
+[[component]]
+name = "tp_tfa_bg"
+type = "rectangle"
+parent = "content"
+x = 0
+y = 22
+width = 236
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "tp_tfa_edge"
+type = "rectangle"
+parent = "content"
+x = 0
+y = 22
+width = 236
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "tp_tfa"
+type = "text"
+parent = "content"
+x = 0
+y = 22
+width = 236
+height = 26
+text = "Fractured Archive"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "tp_toa_bg"
+type = "rectangle"
+parent = "content"
+x = 0
+y = 54
+width = 236
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "tp_toa_edge"
+type = "rectangle"
+parent = "content"
+x = 0
+y = 54
+width = 236
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "tp_toa"
+type = "text"
+parent = "content"
+x = 0
+y = 54
+width = 236
+height = 26
+text = "Tombs of Amascut"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "h_sb"
+type = "text"
+parent = "content"
+x = 0
+y = 96
+width = 236
+height = 18
+text = "Spellbooks"
+font = "bold"
+h_align = "left"
+v_align = "center"
+color = "#FF981F"
+text_shadow = true
+
+[[component]]
+name = "sb_standard_bg"
+type = "rectangle"
+parent = "content"
+x = 0
+y = 118
+width = 114
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "sb_standard_edge"
+type = "rectangle"
+parent = "content"
+x = 0
+y = 118
+width = 114
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "sb_standard"
+type = "text"
+parent = "content"
+x = 0
+y = 118
+width = 114
+height = 26
+text = "Standard"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "sb_ancients_bg"
+type = "rectangle"
+parent = "content"
+x = 122
+y = 118
+width = 114
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "sb_ancients_edge"
+type = "rectangle"
+parent = "content"
+x = 122
+y = 118
+width = 114
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "sb_ancients"
+type = "text"
+parent = "content"
+x = 122
+y = 118
+width = 114
+height = 26
+text = "Ancients"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "sb_lunars_bg"
+type = "rectangle"
+parent = "content"
+x = 0
+y = 150
+width = 114
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "sb_lunars_edge"
+type = "rectangle"
+parent = "content"
+x = 0
+y = 150
+width = 114
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "sb_lunars"
+type = "text"
+parent = "content"
+x = 0
+y = 150
+width = 114
+height = 26
+text = "Lunars"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "sb_arceuus_bg"
+type = "rectangle"
+parent = "content"
+x = 122
+y = 150
+width = 114
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "sb_arceuus_edge"
+type = "rectangle"
+parent = "content"
+x = 122
+y = 150
+width = 114
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "sb_arceuus"
+type = "text"
+parent = "content"
+x = 122
+y = 150
+width = 114
+height = 26
+text = "Arceuus"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "h_gear"
+type = "text"
+parent = "content"
+x = 256
+y = 0
+width = 236
+height = 18
+text = "Combat gear"
+font = "bold"
+h_align = "left"
+v_align = "center"
+color = "#FF981F"
+text_shadow = true
+
+[[component]]
+name = "gear_melee_bg"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 22
+width = 236
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "gear_melee_edge"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 22
+width = 236
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "gear_melee"
+type = "text"
+parent = "content"
+x = 256
+y = 22
+width = 236
+height = 26
+text = "Melee"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "gear_ranged_bg"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 54
+width = 236
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "gear_ranged_edge"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 54
+width = 236
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "gear_ranged"
+type = "text"
+parent = "content"
+x = 256
+y = 54
+width = 236
+height = 26
+text = "Ranged"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "gear_magic_bg"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 86
+width = 236
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "gear_magic_edge"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 86
+width = 236
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "gear_magic"
+type = "text"
+parent = "content"
+x = 256
+y = 86
+width = 236
+height = 26
+text = "Magic"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "h_sup"
+type = "text"
+parent = "content"
+x = 256
+y = 128
+width = 236
+height = 18
+text = "Supplies"
+font = "bold"
+h_align = "left"
+v_align = "center"
+color = "#FF981F"
+text_shadow = true
+
+[[component]]
+name = "sup_food_bg"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 150
+width = 236
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "sup_food_edge"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 150
+width = 236
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "sup_food"
+type = "text"
+parent = "content"
+x = 256
+y = 150
+width = 236
+height = 26
+text = "Potions and food"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "sup_runes_bg"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 182
+width = 236
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "sup_runes_edge"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 182
+width = 236
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "sup_runes"
+type = "text"
+parent = "content"
+x = 256
+y = 182
+width = 236
+height = 26
+text = "Runes and extras"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]
+
+[[component]]
+name = "sup_stats_bg"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 214
+width = 236
+height = 26
+filled = true
+color = "#2B241A"
+opacity = 40
+
+[[component]]
+name = "sup_stats_edge"
+type = "rectangle"
+parent = "content"
+x = 256
+y = 214
+width = 236
+height = 26
+filled = false
+color = "#6B5A3C"
+
+[[component]]
+name = "sup_stats"
+type = "text"
+parent = "content"
+x = 256
+y = 214
+width = 236
+height = 26
+text = "Set all stats to 99"
+font = "regular"
+h_align = "center"
+v_align = "center"
+color = "#FF981F"
+mouse_over_color = "#FFFFFF"
+text_shadow = true
+options = ["Select"]

@@ -1,0 +1,3 @@
+# Accounts the server may run as bots. Names only, no passwords.
+bill
+ted

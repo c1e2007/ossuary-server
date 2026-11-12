@@ -1,0 +1,61 @@
+plugins {
+    id("base-conventions")
+    id("game-cache-test-conventions")
+    id("integration-test-suite")
+}
+
+kotlin {
+    explicitApi()
+}
+
+dependencies {
+    testImplementation(libs.mockk)
+    implementation(libs.kotlin.inline.logger)
+    runtimeOnly(libs.logback.classic)
+    implementation(libs.fastutil)
+    implementation(libs.guice)
+    implementation(libs.rsprot.api)
+    implementation(projects.api.account)
+    implementation(projects.api.attr)
+    implementation(projects.api.config)
+    implementation(projects.api.controller)
+    implementation(projects.api.dbGateway)
+    implementation(projects.api.hunt)
+    implementation(projects.api.invWeight)
+    implementation(projects.api.npc)
+    implementation(projects.api.player)
+    implementation(projects.api.playerOutput)
+    implementation(projects.api.random)
+    implementation(projects.api.realm)
+    implementation(projects.api.registry)
+    implementation(projects.api.repo)
+    implementation(projects.api.route)
+    implementation(projects.api.stats.levelmod)
+    implementation(projects.api.utils.utilsLogging)
+    implementation(projects.api.utils.utilsMap)
+    implementation(projects.api.utils.utilsZone)
+    implementation(projects.engine.events)
+    implementation(projects.engine.game)
+    implementation(projects.engine.interact)
+    implementation(projects.engine.map)
+    implementation(projects.engine.routefinder)
+
+    testImplementation(projects.api.areaChecker)
+    testImplementation(projects.api.market)
+    testImplementation(projects.engine.coroutine)
+}
+
+// Only the integration tests that currently compile are wired in: the rest of `src/integration`
+// predates the cache conversion and references test factories and APIs that no longer exist.
+sourceSets.named("integration") {
+    kotlin.include("**/NpcInteractionProcessorMeleeStepTest.kt")
+}
+
+dependencies {
+    integrationImplementation(projects.api.npc)
+    integrationImplementation(projects.api.player)
+    integrationImplementation(projects.api.playerOutput)
+    integrationImplementation(projects.api.script)
+    integrationImplementation(projects.engine.game)
+    integrationImplementation(projects.engine.map)
+}

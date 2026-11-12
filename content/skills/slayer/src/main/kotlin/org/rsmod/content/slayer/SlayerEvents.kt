@@ -1,0 +1,97 @@
+package org.rsmod.content.slayer
+
+import dev.openrune.rscm.RSCM
+import dev.openrune.rscm.RSCMType
+import jakarta.inject.Inject
+import org.rsmod.api.player.protect.ProtectedAccess
+import org.rsmod.api.player.vars.VarPlayerIntMapSetter
+import org.rsmod.api.script.onOpNpc1
+import org.rsmod.api.script.onOpNpc3
+import org.rsmod.api.script.onOpNpc4
+import org.rsmod.api.script.onOpNpc5
+import org.rsmod.api.shops.Shops
+import org.rsmod.content.slayer.core.SlayerTaskManager
+import org.rsmod.content.slayer.dialogue.SlayerMasters
+import org.rsmod.content.slayer.dialogue.SlayerMasters.spriaStart
+import org.rsmod.content.slayer.dialogue.SlayerMasters.steveStart
+import org.rsmod.content.slayer.dialogue.StandardSlayerDialogue.openMain
+import org.rsmod.content.slayer.dialogue.StandardSlayerDialogue.requestAssignment
+import org.rsmod.content.slayer.dialogue.masters.KonarDialogue.needAnotherAssignment as konarNeedAssignment
+import org.rsmod.content.slayer.dialogue.masters.KonarDialogue.start as konarStart
+import org.rsmod.content.slayer.dialogue.masters.KrystiliaDialogue.needAnotherAssignment as krystiliaNeedAssignment
+import org.rsmod.content.slayer.dialogue.masters.KrystiliaDialogue.start as krystiliaStart
+import org.rsmod.content.slayer.dialogue.masters.MortimerDialogue.needAnotherAssignment as mortimerNeedAssignment
+import org.rsmod.content.slayer.dialogue.masters.MortimerDialogue.start as mortimerStart
+import org.rsmod.content.slayer.dialogue.masters.TuradelDialogue.start as turaelStart
+import org.rsmod.game.entity.Npc
+import org.rsmod.plugin.scripts.PluginScript
+import org.rsmod.plugin.scripts.ScriptContext
+
+class SlayerEvents @Inject constructor(private val shops: Shops) : PluginScript() {
+
+    override fun ScriptContext.startup() {
+        val npcIds = SlayerTaskManager.slayerMasterNpcs.map { it.id }.toSet()
+        for (npcId in npcIds) {
+            val npcName = RSCM.getReverseMapping(RSCMType.NPC, npcId)
+            onOpNpc1(npcName) { handleOp1(it.npc, npcId, npcName) }
+            onOpNpc3(npcName) { handleOp3(it.npc, npcId, npcName) }
+            onOpNpc4(npcName) { openSlayerShop() }
+            onOpNpc5(npcName) { handleOp5(npcName) }
+        }
+    }
+
+    private suspend fun ProtectedAccess.handleOp1(npc: Npc, npcId: Int, internalName: String) {
+        focusMaster(internalName)
+        startDialogue(npc) {
+            when (npcId) {
+                SlayerMasters.Npc.turael -> turaelStart()
+                SlayerMasters.Npc.krystilia -> krystiliaStart()
+                SlayerMasters.Npc.konar -> konarStart()
+                SlayerMasters.Npc.mortimer -> mortimerStart()
+                SlayerMasters.Npc.spria, SlayerMasters.Npc.spriaActive -> spriaStart()
+                SlayerMasters.Npc.steve -> steveStart()
+                else -> openMain(npcId,
+                    extras = SlayerMasters.extraMenuOptions(this, npcId)
+                )
+            }
+        }
+    }
+
+    private suspend fun ProtectedAccess.handleOp3(npc: Npc, npcId: Int, internalName: String) {
+        focusMaster(internalName)
+        startDialogue(npc) {
+            when (npcId) {
+                SlayerMasters.Npc.turael -> requestAssignment(SlayerMasters.Npc.turael)
+                SlayerMasters.Npc.krystilia -> krystiliaNeedAssignment()
+                SlayerMasters.Npc.konar -> konarNeedAssignment()
+                SlayerMasters.Npc.mortimer -> mortimerNeedAssignment()
+                SlayerMasters.Npc.spria, SlayerMasters.Npc.spriaActive -> requestAssignment(
+                    if (npcId == SlayerMasters.Npc.spria) SlayerMasters.Npc.spria
+                    else SlayerMasters.Npc.spriaActive
+                )
+                SlayerMasters.Npc.steve -> requestAssignment(SlayerMasters.Npc.steve)
+                else -> requestAssignment(npcId)
+            }
+        }
+    }
+
+    private fun ProtectedAccess.openSlayerShop() {
+        shops.open(
+            player = player,
+            title = "Slayer Equipment",
+            shopInv = "inv.slayershop",
+            buyPercentage = 60.0,
+            sellPercentage = 100.0,
+            changePercentage = 0.1,
+        )
+    }
+
+    private fun ProtectedAccess.handleOp5(npcId: String) {
+        SlayerInterfaces.openInterface(this, npcId)
+    }
+
+    private fun ProtectedAccess.focusMaster(internalName: String) {
+        val master = SlayerTaskManager.findMasterByNpc(internalName) ?: return
+        VarPlayerIntMapSetter.set(player, "varbit.slayer_master_in_focus", master.masterId)
+    }
+}

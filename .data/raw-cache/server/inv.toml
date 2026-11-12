@@ -1,0 +1,89 @@
+[[inventory]]
+isServerOnly = true
+id = "inv.inv"
+inherit = "inv.inv"
+
+scope = "Perm"
+protect = false
+runWeight = true
+
+[[inventory]]
+isServerOnly = true
+id = "inv.worn"
+inherit = "inv.worn"
+
+scope = "Perm"
+protect = false
+runWeight = true
+
+[[inventory]]
+isServerOnly = true
+id = "inv.bank"
+inherit = "inv.bank"
+
+scope = "Perm"
+stack = "Always"
+protect = false
+placeholders = true
+uimBlocked = true
+
+[[inventory]]
+isServerOnly = true
+id = "inv.tackle_box"
+inherit = "inv.tackle_box"
+scope = "Perm"
+protect = false
+
+[[inventory]]
+isServerOnly = true
+id = "inv.tradeoffer"
+inherit = "inv.tradeoffer"
+size = 28
+scope = "Perm"
+protect = true
+
+[[inventory]]
+isServerOnly = true
+id = "inv.skill_guide_hunting_tracking"
+inherit = "inv.skill_guide_hunting_tracking"
+stack = "Never"
+
+[[inventory]]
+isServerOnly = true
+id = "inv.collection_transmit"
+inherit = "inv.collection_transmit"
+size = 2000
+scope = "Perm"
+stack = "Always"
+protect = false
+
+
+[[inventory]]
+isServerOnly = true
+id = "inv.trail_rewardinv"
+inherit = "inv.trail_rewardinv"
+scope = "Temp"
+stack = "Always"
+protect = false
+
+[[inventory]]
+isServerOnly = true
+id = "inv.dom_lootpile"
+inherit = "inv.dom_lootpile"
+scope = "Temp"
+stack = "Always"
+protect = false
+
+[[inventory]]
+isServerOnly = true
+id = "inv.dom_lootpile_during"
+inherit = "inv.dom_lootpile_during"
+scope = "Temp"
+stack = "Always"
+protect = false
+
+[[inventory]]
+isServerOnly = true
+id = "inv.tfa_chests"
+inherit = "inv.tfa_chests"
+protect = false

@@ -1,0 +1,12 @@
+[[area]]
+name = "The Fractured Archive Lobby"
+area_id = "area.tfa_lobby"
+levels = [0]
+
+[[area.polygons]]
+vertices = [
+    [4110, 5540],
+    [4145, 5540],
+    [4145, 5567],
+    [4110, 5567],
+]

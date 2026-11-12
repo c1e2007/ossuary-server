@@ -1,0 +1,461 @@
+[[varn]]
+id = "varn.lastcombat"
+
+[[varn]]
+id = "varn.aggressive_player"
+
+[[varn]]
+id = "varn.generic_state_2"
+
+[[varn]]
+id = "varn.attacking_player"
+
+[[varn]]
+id = "varn.lastattack"
+
+[[varn]]
+id = "varn.flat_armour"
+
+[[varn]]
+id = "varn.immune_melee"
+
+[[varn]]
+id = "varn.immune_ranged"
+
+[[varn]]
+id = "varn.immune_magic"
+
+[[varn]]
+id = "varn.gorilla_protect_damage"
+
+[[varn]]
+id = "varn.gorilla_protect_hits"
+
+[[varn]]
+id = "varn.gorilla_miss_streak"
+
+[[varn]]
+id = "varn.gorilla_protect_switching"
+
+[[varn]]
+id = "varn.td_shield_up"
+
+[[varn]]
+id = "varn.td_overhead_style"
+
+[[varn]]
+id = "varn.guaranteed_hit"
+
+[[varn]]
+id = "varn.venenatis_attacks"
+
+[[varn]]
+id = "varn.awakened_state"
+
+[[varn]]
+id = "varn.muspah_damage_since_switch"
+
+[[varn]]
+id = "varn.skip_killcount"
+
+[[varn]]
+id = "varn.muspah_melee_still_ticks"
+
+[[varn]]
+id = "varn.duke_flare_attacks"
+
+[[varn]]
+id = "varn.duke_flare_threshold"
+
+[[varn]]
+id = "varn.duke_after_gaze"
+
+[[varn]]
+id = "varn.callisto_roars"
+
+[[varn]]
+id = "varn.poison_severity"
+
+[[varn]]
+id = "varn.freeze_end_clock"
+
+[[varn]]
+id = "varn.freeze_immunity_end_clock"
+
+[[varn]]
+id = "varn.freeze_guaranteed"
+
+[[varn]]
+id = "varn.leviathan_volley_stage"
+
+[[varn]]
+id = "varn.leviathan_volleys"
+
+[[varn]]
+id = "varn.leviathan_stuns"
+
+[[varn]]
+id = "varn.leviathan_stunned"
+
+[[varn]]
+id = "varn.leviathan_in_special"
+
+[[varn]]
+id = "varn.leviathan_next_special"
+
+[[varn]]
+id = "varn.leviathan_stun_bearing"
+
+[[varn]]
+id = "varn.muspah_hits_since_switch"
+
+[[varn]]
+id = "varn.muspah_special_cooldown_end"
+
+[[varn]]
+id = "varn.muspah_final_triggered"
+
+[[varn]]
+id = "varn.muspah_shield_broken"
+
+[[varn]]
+id = "varn.muspah_shield_hp"
+
+[[varn]]
+id = "varn.muspah_pre_shield_hp"
+
+[[varn]]
+id = "varn.muspah_pre_shield_max_hp"
+
+[[varn]]
+id = "varn.muspah_final_attacks"
+
+[[varn]]
+id = "varn.muspah_shield_corrupted"
+
+[[varn]]
+id = "varn.vardorvis_next_head_gaze"
+
+[[varn]]
+id = "varn.vardorvis_strangle_ready_at"
+
+[[varn]]
+id = "varn.vardorvis_next_axes"
+
+[[varn]]
+id = "varn.td_damage_since_swap"
+
+[[varn]]
+id = "varn.td_first_hit_taken"
+
+[[varn]]
+id = "varn.td_defenceless"
+
+[[varn]]
+id = "varn.td_defenceless_at"
+
+[[varn]]
+id = "varn.dark_lure_end_clock"
+
+[[varn]]
+id = "varn.dom_charge"
+
+[[varn]]
+id = "varn.dom_fight_ticks"
+
+[[varn]]
+id = "varn.dom_attacks"
+
+[[varn]]
+id = "varn.dom_shield_stashed_hp"
+
+[[varn]]
+id = "varn.dom_charge_end"
+
+[[varn]]
+id = "varn.dom_charge_loop_from"
+
+[[varn]]
+id = "varn.dom_rotation_step"
+
+[[varn]]
+id = "varn.dom_step_attacks"
+
+[[varn]]
+id = "varn.hunllef_style"
+
+[[varn]]
+id = "varn.hunllef_cycle"
+
+[[varn]]
+id = "varn.hunllef_protect"
+
+[[varn]]
+id = "varn.hunllef_off_prayer"
+
+[[varn]]
+id = "varn.disguise_idle"
+
+[[varn]]
+id = "varn.brutus_next_special"
+
+[[varn]]
+id = "varn.brutus_aim"
+
+[[varn]]
+id = "varn.brutus_unreached"
+
+[[varn]]
+id = "varn.brutus_death_said"
+
+[[varn]]
+id = "varn.brutus_bell_rung"
+
+[[varn]]
+id = "varn.slayer_engaged_target"
+
+[[varn]]
+id = "varn.slayer_engaged_clock"
+
+[[varn]]
+id = "varn.slayer_finishing_until"
+
+[[varn]]
+id = "varn.toa_baba_rolls"
+
+[[varn]]
+id = "varn.toa_baba_rows"
+
+[[varn]]
+id = "varn.toa_baba_roll_exit"
+
+[[varn]]
+id = "varn.toa_baba_weak_lane"
+
+[[varn]]
+id = "varn.toa_baba_autos"
+
+[[varn]]
+id = "varn.toa_baba_throw_at"
+
+[[varn]]
+id = "varn.toa_baba_rockfall_ready"
+
+[[varn]]
+id = "varn.toa_baba_last_special"
+
+[[varn]]
+id = "varn.toa_baba_under"
+
+[[varn]]
+id = "varn.toa_baba_stomp_ready"
+
+[[varn]]
+id = "varn.toa_kephri_eggs_next"
+
+[[varn]]
+id = "varn.forced_max_hit_styles"
+
+[[varn]]
+id = "varn.toa_baba_baboon_next_bash"
+
+[[varn]]
+id = "varn.toa_baba_baboon_next_pick"
+
+[[varn]]
+id = "varn.toa_croc_wake_at"
+
+[[varn]]
+id = "varn.toa_warden_orb_hits"
+
+[[varn]]
+id = "varn.toa_zebak_wave_dz"
+
+[[varn]]
+id = "varn.toa_zebak_wave_ticks"
+
+[[varn]]
+id = "varn.toa_zebak_jug_dx"
+
+[[varn]]
+id = "varn.toa_zebak_jug_dz"
+
+[[varn]]
+id = "varn.toa_zebak_jug_left"
+
+[[varn]]
+id = "varn.toa_zebak_cloud_switch"
+
+[[varn]]
+id = "varn.toa_zebak_cloud_delay"
+
+[[varn]]
+id = "varn.toa_zebak_cloud_last"
+
+[[varn]]
+id = "varn.toa_zebak_cloud_target"
+
+[[varn]]
+id = "varn.ocellus_arrived_at"
+
+[[varn]]
+id = "varn.ocellus_volley_style"
+
+[[varn]]
+id = "varn.ocellus_corner"
+
+[[varn]]
+id = "varn.ocellus_centre_side"
+
+[[varn]]
+id = "varn.ocellus_threshold"
+
+[[varn]]
+id = "varn.ocellus_active_tendrils"
+
+[[varn]]
+id = "varn.ocellus_meter"
+
+[[varn]]
+id = "varn.ocellus_barrage_waves"
+
+[[varn]]
+id = "varn.ocellus_special_cycles"
+
+[[varn]]
+id = "varn.ocellus_curse"
+
+[[varn]]
+id = "varn.ocellus_rift_next"
+
+[[varn]]
+id = "varn.ocellus_rift_busy"
+
+[[varn]]
+id = "varn.guardian_shield_max"
+
+[[varn]]
+id = "varn.guardian_ground_max"
+
+[[varn]]
+id = "varn.guardian_health"
+
+[[varn]]
+id = "varn.guardian_landings"
+
+[[varn]]
+id = "varn.guardian_battery_hp"
+
+[[varn]]
+id = "varn.guardian_battery_hit"
+
+[[varn]]
+id = "varn.guardian_enraged"
+
+[[varn]]
+id = "varn.dreadnoth_hp_max"
+
+[[varn]]
+id = "varn.dreadnoth_absorbed"
+
+[[varn]]
+id = "varn.dreadnoth_dealt"
+
+[[varn]]
+id = "varn.dreadnoth_split"
+
+[[varn]]
+id = "varn.dreadnoth_waves_done"
+
+[[varn]]
+id = "varn.dreadnoth_spawn_budget"
+
+[[varn]]
+id = "varn.dreadnoth_done"
+
+[[varn]]
+id = "varn.bork_hp_max"
+
+[[varn]]
+id = "varn.bork_smork_max"
+
+[[varn]]
+id = "varn.bork_smork_pct"
+
+[[varn]]
+id = "varn.bork_tempo"
+
+[[varn]]
+id = "varn.bork_dazed"
+
+[[varn]]
+id = "varn.bork_armour"
+
+[[varn]]
+id = "varn.bork_magic_armour"
+
+[[varn]]
+id = "varn.bork_dead"
+
+[[varn]]
+id = "varn.bork_removed"
+
+[[varn]]
+id = "varn.bork_smork_dead"
+
+[[varn]]
+id = "varn.bork_smork_removed"
+
+[[varn]]
+id = "varn.bork_stomp_side"
+
+[[varn]]
+id = "varn.bork_done"
+
+[[varn]]
+id = "varn.xarth_hp_max"
+
+[[varn]]
+id = "varn.xarth_wave"
+
+[[varn]]
+id = "varn.xarth_first_heap"
+
+[[varn]]
+id = "varn.xarth_heaps"
+
+[[varn]]
+id = "varn.xarth_slot"
+
+[[varn]]
+id = "varn.xarth_magics"
+
+[[varn]]
+id = "varn.xarth_healed"
+
+[[varn]]
+id = "varn.xarth_heal_pending"
+
+[[varn]]
+id = "varn.xarth_last_hit"
+
+[[varn]]
+id = "varn.xarth_dead"
+
+[[varn]]
+id = "varn.xarth_done"
+
+[[varn]]
+id = "varn.ezekiel_hp_max"
+
+[[varn]]
+id = "varn.ezekiel_weakened"
+
+[[varn]]
+id = "varn.ezekiel_finale"
+
+[[varn]]
+id = "varn.ezekiel_dead"
+
+[[varn]]
+id = "varn.ezekiel_done"
