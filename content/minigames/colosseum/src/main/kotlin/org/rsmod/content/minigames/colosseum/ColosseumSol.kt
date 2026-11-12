@@ -351,6 +351,9 @@ constructor(
         run.fight?.npc?.say(DEATH_LINE)
         run.wave = Colosseum.FINAL_WAVE
         run.totalTicks += run.waveTicks
+        run.player.colosseumKills = run.player.colosseumKills + 1
+        val best = run.player.colosseumBestTicks
+        if (best == 0 || run.totalTicks < best) run.player.colosseumBestTicks = run.totalTicks
         deps.worldQueues.add(DEATH_TICKS) { finish(run) }
     }
 
