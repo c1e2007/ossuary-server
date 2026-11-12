@@ -115,6 +115,13 @@ private val BEST_TICKS = AttributeKey<Int>(persistenceKey = "yama_best_ticks")
 
 internal var Player.voiceProgress by intVarBit(YamaIds.VB_VOICE_PROGRESS)
 internal var Player.yamaKills by intVarp(YamaIds.VP_KILLS)
+internal var Player.yamaThroneState by intVarBit(YamaIds.VB_THRONE_STATE)
+internal var Player.yamaMultiway by intVarBit(YamaIds.VB_MULTIWAY)
+internal var Player.yamaTransitionPhase by intVarBit(YamaIds.VB_TRANSITION_PHASE)
+internal var Player.yamaTransitionDamage by intVarBit(YamaIds.VB_TRANSITION_DAMAGE)
+internal var Player.yamaMinimap by intVarBit(YamaIds.VB_MINIMAP)
+internal var Player.yamaBurnTotal by intVarBit(YamaIds.VB_BURN_TOTAL)
+internal var Player.yamaBurnSplat by intVarBit(YamaIds.VB_BURN_SPLAT)
 
 internal var Player.contractOffered: Boolean
     get() = attr[CONTRACT_OFFERED] ?: false

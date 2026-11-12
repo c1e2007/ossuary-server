@@ -30,7 +30,8 @@ internal class YamaThrone @Inject constructor(private val fights: YamaFights) : 
             return
         }
         if (!player.contractSigned) {
-            startDialogue(npc = fight.throne) { challengeUnsigned() }
+            val throne = fight.throne
+            if (throne != null) startDialogue(throne) { challengeUnsigned() }
             return
         }
         fights.engage(player)
