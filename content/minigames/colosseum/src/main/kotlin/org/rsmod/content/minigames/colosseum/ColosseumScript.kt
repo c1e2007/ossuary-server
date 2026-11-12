@@ -1,5 +1,6 @@
 package org.rsmod.content.minigames.colosseum
 
+import dev.openrune.ServerCacheManager
 import dev.openrune.rscm.RSCM.asRSCM
 import dev.openrune.rscm.RSCMType
 import jakarta.inject.Inject
@@ -11,13 +12,17 @@ import org.rsmod.api.player.dialogue.Dialogue
 import org.rsmod.api.player.hook.TeleportType
 import org.rsmod.api.player.output.mes
 import org.rsmod.api.player.protect.ProtectedAccess
+import org.rsmod.api.repo.npc.NpcRepository
 import org.rsmod.api.script.onEvent
+import org.rsmod.api.script.onGameStartup
 import org.rsmod.api.script.onIfModalButton
 import org.rsmod.api.script.onOpLoc1
 import org.rsmod.api.script.onOpNpc1
 import org.rsmod.api.script.onOpNpc3
 import org.rsmod.content.interfaces.bank.tryOpenBank
+import org.rsmod.game.entity.Npc
 import org.rsmod.game.entity.Player
+import org.rsmod.game.map.Direction
 import org.rsmod.plugin.scripts.PluginScript
 import org.rsmod.plugin.scripts.ScriptContext
 
@@ -28,8 +33,10 @@ constructor(
     private val sol: ColosseumSol,
     private val rewards: ColosseumRewards,
     private val hazards: ColosseumHazards,
+    private val npcRepo: NpcRepository,
 ) : PluginScript() {
     override fun ScriptContext.startup() {
+        onGameStartup { spawnLobbyMinimus() }
         onOpLoc1("loc.colosseum_entrance_outside") { goDown() }
         onOpLoc1("loc.colosseum_exit_lobby") { goUp() }
         onOpLoc1("loc.colosseum_entrance") { tunnel() }
@@ -52,6 +59,13 @@ constructor(
             }
             player.colosseumSelected = 0
         }
+    }
+
+    private fun spawnLobbyMinimus() {
+        val type = ServerCacheManager.getNpc(ColosseumNpcs.MINIMUS_LOBBY.asRSCM(RSCMType.NPC)) ?: return
+        val npc = Npc(type, Colosseum.LOBBY_MINIMUS)
+        npcRepo.add(npc, Int.MAX_VALUE)
+        npc.faceDirection(Direction.South)
     }
 
     private suspend fun ProtectedAccess.goDown() {

@@ -36,6 +36,7 @@ internal object Colosseum {
     val LOBBY = CoordGrid(1799, 9506, 0)
     val CITY = CoordGrid(1795, 3106, 0)
     val LOBBY_RESPAWN = CoordGrid(1804, 9508, 0)
+    val LOBBY_MINIMUS = CoordGrid(1806, 9508, 0)
     val ARENA_START = CoordGrid(1824, 3094, 0)
     val MINIMUS_START = CoordGrid(1824, 3106, 0)
     val ARRIVAL_WALK = CoordGrid(1824, 3104, 0)
