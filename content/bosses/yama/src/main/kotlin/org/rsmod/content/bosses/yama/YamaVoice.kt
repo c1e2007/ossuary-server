@@ -42,7 +42,7 @@ internal class YamaVoice @Inject constructor(private val gate: YamaEntryGate) : 
 
     private suspend fun Dialogue.talk() {
         if (!canEnter(player)) {
-            mes("You need to complete A Kingdom Divided before entering Yama's Domain.")
+            player.mes("You need to complete A Kingdom Divided before entering Yama's Domain.")
             return
         }
         if (player.voiceProgress < VOICE_MET) {

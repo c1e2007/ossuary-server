@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     implementation(libs.guice)
+    implementation(projects.api.attr)
     implementation(projects.api.bosses)
     implementation(projects.api.combat.combatCommons)
     implementation(projects.api.combat.combatFormulas)
@@ -15,6 +16,7 @@ dependencies {
     implementation(projects.api.playerOutput)
     implementation(projects.api.pluginCommons)
     implementation(projects.api.route)
+    implementation(projects.content.quest)
     implementation(projects.engine.game)
     implementation(projects.engine.plugin)
 }
