@@ -75,8 +75,8 @@ internal object YamaGlyphs {
         val source = fight.arena.source(yama.coords)
         val distance =
             maxOf(
-                YamaCommon.gap(glyph.x, YamaCommon.GLYPH_SIZE, source.x, 3),
-                YamaCommon.gap(glyph.z, YamaCommon.GLYPH_SIZE, source.z, 3),
+                YamaCommon.gap(glyph.x, YamaCommon.GLYPH_SIZE, source.x, YamaCommon.YAMA_SIZE),
+                YamaCommon.gap(glyph.z, YamaCommon.GLYPH_SIZE, source.z, YamaCommon.YAMA_SIZE),
             )
                 .coerceAtLeast(1)
         return BY_YAMA_DISTANCE.firstOrNull { distance <= it.first }?.second ?: FAR_VALUE

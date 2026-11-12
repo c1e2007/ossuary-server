@@ -37,6 +37,7 @@ internal object YamaCommon {
     const val YAMA_HITPOINTS = 2500
     val THRESHOLDS = intArrayOf(1666, 833)
     const val GLYPH_SIZE = 3
+    const val YAMA_SIZE = 5
 
     /** One row of the arena floor: [y] and the x ranges that are floor on it. */
     class ArenaRow(val y: Int, val ranges: List<IntRange>)

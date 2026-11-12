@@ -22,6 +22,7 @@ import org.rsmod.map.CoordGrid
  */
 internal object YamaAttacks {
     private const val MAX_HIT = 46
+    private const val YAMA_SIZE = 5
 
     internal enum class Style(val type: HitType) {
         FIRE(HitType.Magic),
@@ -90,7 +91,7 @@ internal object YamaAttacks {
         val yama = fight.yama ?: return false
         val at = yama.coords
         val p = fight.player.coords
-        val size = 3
+        val size = YAMA_SIZE
         val dx = if (p.x < at.x) at.x - p.x else maxOf(0, p.x - (at.x + size - 1))
         val dz = if (p.z < at.z) at.z - p.z else maxOf(0, p.z - (at.z + size - 1))
         return dx + dz == 1 && p.level == at.level
