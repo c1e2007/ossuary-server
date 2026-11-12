@@ -20,7 +20,6 @@ internal var Player.colosseumWavesCompleted by intVarp("varp.total_colosseum_wav
 internal val Player.colosseumRank: String
     get() = Colosseum.rankFor(colosseumGlory)
 
-
 private var Player.tierMantimayhem by intVarBit("varbit.colosseum_modifier_mantimayhem_stacks_client")
 private var Player.tierReentry by intVarBit("varbit.colosseum_modifier_reentry_stacks_client")
 private var Player.tierBees by intVarBit("varbit.colosseum_modifier_toxicity_stacks_client")

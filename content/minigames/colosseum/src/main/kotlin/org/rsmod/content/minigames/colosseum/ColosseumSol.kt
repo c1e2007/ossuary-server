@@ -17,7 +17,6 @@ import org.rsmod.game.loc.LocAngle
 import org.rsmod.game.loc.LocInfo
 import org.rsmod.game.loc.LocShape
 import org.rsmod.game.movement.RouteRequestCoord
-import org.rsmod.map.CoordGrid
 
 private var Player.protectFromMelee by intVarBit("varbit.prayer_protectfrommelee")
 
