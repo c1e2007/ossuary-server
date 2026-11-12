@@ -24,6 +24,7 @@ internal object YamaLoot {
                 delay(LOOT_TICKS)
                 val loot = fight?.arena?.tile(YamaCommon.LOOT_TILE) ?: coords
                 npcDeath.deathWithDrops(this, loot)
+                fight?.finishKill()
             }
         }
     }

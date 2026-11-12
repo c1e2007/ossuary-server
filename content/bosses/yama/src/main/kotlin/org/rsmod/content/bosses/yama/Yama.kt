@@ -410,15 +410,38 @@ internal class YamaFight(
                 }
             throne?.say(lines.random())
         }
-        at(RESET_TICKS) { resetAfterKill() }
     }
 
-    /** Yama is back on his throne and can be challenged again, without leaving the domain. */
-    private fun resetAfterKill() {
+    /**
+     * Called once the loot has dropped: Yama is back on his throne and can be challenged again
+     * without leaving the domain. The dead npc is the engine's to remove (the drop needs it), so
+     * it is only forgotten here.
+     */
+    fun finishKill() {
         if (stopped) return
-        stopFight()
+        events.clear()
+        YamaFlares.clear(this)
+        YamaHazards.clear(this)
+        YamaGlyphs.clear(this)
+        YamaJudge.clear(this)
+        yama = null
+        placeFlames(YamaIds.FLAMES_OPEN)
+        over = false
+        pendingTransition = false
+        phase = 1
         state = YamaState.SEATED
         resetThrone()
+    }
+
+    /** Yama comes back from the Judge phase where he stood, with the hitpoints he left with. */
+    fun respawnYama(tile: CoordGrid, hitpoints: Int) {
+        val npc = spawn(YamaIds.YAMA, arena.tile(tile)) ?: return
+        yama = npc
+        npc.hitpoints = hitpoints
+        deps.encounterRegistry.of(npc).invulnerable = true
+        npc.anim(YamaIds.SEQ_SUMMON)
+        npc.spotanim(YamaIds.SPOT_SUMMON)
+        npc.facePlayer(player)
     }
 
     private fun count(ticks: Int) {
@@ -488,7 +511,6 @@ internal class YamaFight(
         val PHASE_NAMES = listOf("main", "two", "three")
         val FIRST_ATTACK_TICKS = intArrayOf(5, 4, 3)
         const val PHASE_START_TICKS = 3
-        const val RESET_TICKS = 12
         const val AP_RANGE = 32
 
         val FLAME_TILES =
@@ -539,6 +561,11 @@ internal constructor(
         )
         deps.extensionRegistry.register(TURN) { _, npc, _, _ -> fights.fightOfNpc(npc)?.turn() }
 
+        // The engine drops a chase when the target is farther than the cache type's maxRange plus
+        // attackRange from the npc's spawn tile (7 + 1 by default), whatever apRangeOverride says.
+        // Yama's arena is about 30 tiles across, so his type's maxRange covers all of it.
+        ServerCacheManager.getNpc(YamaIds.YAMA.asRSCM(RSCMType.NPC))?.maxRange = ARENA_MAX_RANGE
+
         val yamaIds = spec.npcTypes.mapNotNullTo(mutableSetOf()) { it.npcId() }
         // Every Yama npc is pinned, never respawns and idles on the throne before anything else
         // touches it.
@@ -574,6 +601,7 @@ internal constructor(
 
     private companion object {
         private const val TURN = "yama.turn"
+        private const val ARENA_MAX_RANGE = 40
 
         private fun String.npcId(): Int? = ServerCacheManager.getNpc(this.asRSCM(RSCMType.NPC))?.id
     }
