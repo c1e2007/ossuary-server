@@ -36,6 +36,35 @@ internal class YamaCommands @Inject constructor(private val fights: YamaFights) 
                 }
             }
         }
+        onCommand("yamajudge") {
+            requiredRights = Rights.ADMINISTRATOR
+            desc = "Start the next phase change at Yama's next attack"
+            cheat {
+                val fight = fights.fightOf(player)
+                if (fight == null || fight.state != YamaState.FIGHTING || fight.phase >= 3) {
+                    player.mes("You are not in phase 1 or 2 of the fight.")
+                } else {
+                    fight.pendingTransition = true
+                    player.mes("The Judge comes at Yama's next attack.")
+                }
+            }
+        }
+        onCommand("yamaphase") {
+            requiredRights = Rights.ADMINISTRATOR
+            desc = "Skip to phase 2 or 3 via the Judge: ::yamaphase <2-3>"
+            cheat {
+                val fight = fights.fightOf(player)
+                val target = args.getOrNull(0)?.toIntOrNull()
+                if (fight == null || fight.state != YamaState.FIGHTING || target !in 2..3) {
+                    player.mes("Use ::yamaphase <2-3> while fighting Yama.")
+                } else {
+                    fight.phase = target!! - 1
+                    fight.yama?.hitpoints = YamaCommon.THRESHOLDS[target - 2]
+                    fight.pendingTransition = true
+                    player.mes("The Judge comes at Yama's next attack; then phase $target.")
+                }
+            }
+        }
         onCommand("yamajudgehp") {
             requiredRights = Rights.ADMINISTRATOR
             desc = "Set the Judge of Yama's hitpoints"

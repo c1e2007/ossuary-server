@@ -9,13 +9,18 @@ import org.rsmod.api.npc.events.NpcHitEvents
 import org.rsmod.api.player.output.mes
 import org.rsmod.api.player.output.spotanimSpecific
 import org.rsmod.api.player.protect.ProtectedAccess
+import org.rsmod.api.script.onApLoc1
+import org.rsmod.api.script.onApLoc2
+import org.rsmod.api.script.onApLoc3
+import org.rsmod.api.script.onApLoc4
+import org.rsmod.api.script.onApLoc5
 import org.rsmod.api.script.onModifyNpcHit
 import org.rsmod.api.script.onNpcQueue
-import org.rsmod.api.script.onOpLoc1
 import org.rsmod.game.entity.Npc
 import org.rsmod.game.entity.util.EntityExactMove
 import org.rsmod.game.entity.util.PathingEntityCommon
 import org.rsmod.game.hit.HitType
+import org.rsmod.game.loc.BoundLocInfo
 import org.rsmod.map.CoordGrid
 import org.rsmod.map.util.Translation
 import org.rsmod.plugin.scripts.ScriptContext
@@ -76,6 +81,8 @@ internal object YamaJudge {
     private const val FIREBALL_HIT_TICKS = 4
     private val SHAKE_ATTACKS = listOf(5, 13)
     private const val JUMP_CYCLES = 27
+    private const val JUMP_AP_RANGE = 4
+    private const val JUMP_FACING = 0
 
     // ------------------------------------------------------------------ the phase change
 
@@ -286,39 +293,28 @@ internal object YamaJudge {
 
     // ------------------------------------------------------------------ the stones
 
-    /** A stepping stone: a jump to it from the row one to three tiles before it (captured). */
-    private fun jump(fights: YamaFights, access: ProtectedAccess, stone: CoordGrid) {
-        val player = access.player
+    /**
+     * A stepping stone: a jump to it from the row one to three tiles before it (captured). It is
+     * an approach-range trigger, so the jump starts from where the player stands, as in the
+     * reference, with no walking up to the stone first.
+     */
+    private suspend fun ProtectedAccess.jump(fights: YamaFights, stone: BoundLocInfo) {
+        if (!isWithinApRange(stone, JUMP_AP_RANGE)) return
         val fight = fights.fightOf(player) ?: return
         val state = fight.judge ?: return
-        if (fight.state != YamaState.JUDGE) return
-        if (state.jumpQueued) return
+        if (fight.state != YamaState.JUDGE || state.jumpQueued) return
         val here = fight.playerSource
-        val to = fight.arena.source(stone)
+        val to = fight.arena.source(stone.coords)
         if (to.z - here.z !in 1..3 || abs(to.x - here.x) > 1) {
-            player.mes("I can't reach that!")
+            mes("I can't reach that!")
             return
         }
         state.jumpQueued = true
-        // Started on the next tick, so the slide is sent with it and the landing comes a tick later.
-        fight.deps.worldQueues.add(1) {
-            state.jumpQueued = false
-            if (fight.state != YamaState.JUDGE || fight.stopped) return@add
-            val from = player.coords
-            val lead = Translation.between(from, stone)
-            PathingEntityCommon.teleport(player, fight.deps.collision, stone)
-            player.pendingExactMove =
-                EntityExactMove(
-                    deltaX1 = lead.x,
-                    deltaZ1 = lead.z,
-                    deltaX2 = 0,
-                    deltaZ2 = 0,
-                    clientDelay1 = 0,
-                    clientDelay2 = JUMP_CYCLES,
-                    direction = 0,
-                )
-            player.anim(YamaIds.SEQ_JUMP)
-        }
+        delay(1)
+        anim(YamaIds.SEQ_JUMP)
+        exactMove(coords, stone.coords, delay1 = 0, delay2 = JUMP_CYCLES, dir = JUMP_FACING)
+        delay(1)
+        state.jumpQueued = false
     }
 
     private fun abs(v: Int) = if (v < 0) -v else v
@@ -371,7 +367,12 @@ internal object YamaJudge {
                 fights.fightOfJudge(npc)?.let { onJudgeDeath(it) }
                 npcDeath.deathNoDrops(this)
             }
-            onOpLoc1(stone) { jump(fights, this, it.loc.coords) }
+            // The stone's action slot is not in the repo's dumps, so every approach op jumps.
+            onApLoc1(stone) { jump(fights, it.loc) }
+            onApLoc2(stone) { jump(fights, it.loc) }
+            onApLoc3(stone) { jump(fights, it.loc) }
+            onApLoc4(stone) { jump(fights, it.loc) }
+            onApLoc5(stone) { jump(fights, it.loc) }
         }
     }
 
