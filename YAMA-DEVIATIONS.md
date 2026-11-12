@@ -14,14 +14,8 @@ it does not map onto this engine, the closest equivalent the engine has, and the
    (64-30)/(64+60), about 0.27, while he stands in the magic stance, and every hit by 0.74 in phase 3
    (the reference's ~35 percent higher bonuses). **Reduction**: a damage factor, not a hit-chance
    change; melee and ranged defence are not stance-dependent here.
-2. **Stance movement and reach** (`Fight.Yama.js` `YamaCombat.attackDistance`, `setBlockMovement`).
-   After a melee hit he chases at reach 1; after magic or ranged he stands with reach 10. Closest:
-   `npc.moveRestrict` and `npc.apRangeOverride`. Substitute: `NoMove` plus reach 10 when standing,
-   `Normal` plus reach 1 when chasing. Equivalent in effect.
-3. **Combat target call** (`Fight.Yama.js`, the task's step 17). The task asks for `opPlayer2`. The
-   boss framework fires its combat tick from both `opPlayer2` and `apPlayer2`, but `opPlayer2` only
-   fires adjacent, which cannot express reach 10. Substitute: `apPlayer2`, re-issued every tick in
-   `YamaTargets` when the mode or target is lost.
+2. **Stance movement and reach** (`Fight.Yama.js` `YamaCombat.attackDistance`, `setBlockMovement`). After a melee hit he chases; after magic or ranged he stands. His attacks run on the fight timer wherever the challenger stands. Closest: `NpcApproach.ChaseToMelee` (keeps routing while the script casts from range) with `apRangeOverride` 32, which covers the arena so the combat trigger always fires. Substitute: `Normal` movement plus `ChaseToMelee` in the melee stance, `NoMove` plus `StopInRange` when standing and in phase 3. Equivalent in effect.
+3. **Combat target call** (`Fight.Yama.js`, the task step 17). The task asks for `opPlayer2`, which only fires when adjacent. Substitute: `apPlayer2`, re-issued every tick in `YamaTargets`.
 4. **Attack timing** (`Fight.Yama.js` `fightTick`). The reference runs its own per-tick attack timer.
    Substitute: the boss framework drives one `turn` external at `attackRate` 8, 8 and 7, with
    `suppressAttacks` for the first attack of a phase (5, 4 and 3 ticks). The rotation is the
@@ -85,9 +79,7 @@ it does not map onto this engine, the closest equivalent the engine has, and the
 22. **Kill count line and personal best** (`Fight.Yama.js` `count`, `sendBossKillCount`,
     `boss:personal-best`). The kill count is `varp.total_yama_kills`; the line and the personal best
     are chat messages and a persistent attribute, not the kill-count interface or the event.
-23. **Stepping stones** (`Judge.Yama.js` `jump`, `stayToJump`). The reference jumps from where the
-    player stands and uses `ObstacleRunner`. Substitute: `onOpLoc1`, so the player first walks next
-    to the stone, then a one-tick-delayed exact-move glide with the jump animation. **Reduction**.
+23. **Stepping stones** (`Judge.Yama.js` `jump`, `stayToJump`). The reference jumps from where the player stands. Substitute: an approach-range loc trigger (range 4) on every action slot, because the stone loc's action slot is not in the repo's dumps, then the engine's `exactMove` with the jump animation. Equivalent in effect.
 24. **Fire surge movement** (`Judge.Yama.js` `moveSurges`, `npc.exactMove`). Substitute: teleport plus a
     one-tick `pendingExactMove` glide, as Vardorvis's axes do.
 25. **Voice placement** (`docs/yama.md`: the Voice stands on plane 0). `chasm_of_fire.toml` had him on plane 1, where a player on plane 0 cannot reach him. Fixed: the spawn is now on plane 0 at (1439, 10079). The black demons and the other demons the reference also moved are left as they were.
