@@ -33,6 +33,12 @@
 
 1. Aggro range is too short. Enemies only aggress within a limited range. Any NPC spawned in a wave
    must aggress the player regardless of distance in the arena.
+   - Likely cause (found while fixing Yama): the engine ends an npc's interaction when the player is
+     farther than `visType.maxRange + visType.attackRange` of the cache type from the npc's *spawn tile*
+     (defaults 7 + 1), whatever `apRangeOverride` says. See `NpcInteractionProcessor.isWithinMaxOpRange`.
+   - Planned fix: raise `maxRange` on the arena enemy types at startup (as Yama's controller does for
+     `npc.yama`), and use `NpcApproach.ChaseToMelee` so they keep closing in. To be done when we
+     return to the Colosseum.
 2. Minimus wanders by the reward chest. He must hold his spot next to the chest without moving.
 3. Minimus spawns instantly. He must not spawn for 5 ticks between waves.
 4. Rewards do not render in the between-wave loot section or the next-wave loot section.
