@@ -35,13 +35,23 @@ internal constructor(
 
     override fun area(): InstanceArea = INSTANCE
 
+    /** Every entry comes up clean: no grace window, no dropped items left behind. */
+    override fun destroyWhenEmpty(): Boolean = true
+
     override fun ScriptContext.configure() {
         gate.enter = { enterInstance() }
 
         onEnterPrelude { result, enter ->
             withInstanceEnterTransition(InstanceEnterTransition(message = ENTER_MESSAGE), enter)
-            if (result is InstanceManager.Result.Created) {
-                fights.seat(player, result.session, result.enter)
+            // A fresh domain is seated on creation; a rejoin with no fight left is seated too.
+            when (result) {
+                is InstanceManager.Result.Created ->
+                    fights.seat(player, result.session, result.enter)
+                is InstanceManager.Result.Joined ->
+                    if (fights.fightOf(player) == null) {
+                        fights.seat(player, result.session, result.enter)
+                    }
+                else -> Unit
             }
         }
 
