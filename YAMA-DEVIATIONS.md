@@ -90,8 +90,7 @@ it does not map onto this engine, the closest equivalent the engine has, and the
     to the stone, then a one-tick-delayed exact-move glide with the jump animation. **Reduction**.
 24. **Fire surge movement** (`Judge.Yama.js` `moveSurges`, `npc.exactMove`). Substitute: teleport plus a
     one-tick `pendingExactMove` glide, as Vardorvis's axes do.
-25. **Voice placement** (`docs/yama.md`: the Voice stands on plane 0). `chasm_of_fire.toml` places him
-    on plane 1. Left as is; the placement is the map data's, not this module's.
+25. **Voice placement** (`docs/yama.md`: the Voice stands on plane 0). `chasm_of_fire.toml` had him on plane 1, where a player on plane 0 cannot reach him. Fixed: the spawn is now on plane 0 at (1439, 10079). The black demons and the other demons the reference also moved are left as they were.
 26. **A Kingdom Divided gate** (`Domain.Yama.js` `canEnter`). The quest is not implemented here;
     the gate uses the assumed key `quest_akd` and so passes only under an assume-completed policy.
 27. **Flames Pass and Quick Pass** (`Fight.Yama.js` `passFlames`). Fleeing through the flames to

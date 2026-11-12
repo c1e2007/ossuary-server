@@ -24,8 +24,8 @@ internal object YamaCommon {
     val THRONE_TILE = CoordGrid(1500, 10089, 0)
     val VOICE_RESPAWN = CoordGrid(1439, 10076, 0)
 
-    /** Next to the Voice, who the map data stands on plane 1. */
-    val VOICE_LEDGE = CoordGrid(1439, 10077, 1)
+    /** Next to the Voice, who stands at (1439, 10079) on plane 0. */
+    val VOICE_LEDGE = CoordGrid(1439, 10077, 0)
     val YAMA_TILE = CoordGrid(1501, 10076, 0)
     val ARENA_CENTRE = CoordGrid(1503, 10078, 0)
     val LOOT_TILE = CoordGrid(1503, 10088, 0)
