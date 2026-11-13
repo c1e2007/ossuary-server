@@ -79,8 +79,8 @@ internal class OcellusTendrils(private val deps: BossDeps, private val meter: Oc
         private const val CENTRE_SECOND_RESOLVE = 6
         private val DAMAGE = 3..5
         private val CHARGE_SOUNDS =
-            listOf("synth.ocellus_tendril_charge_01", "synth.ocellus_tendril_charge_02")
+            listOf("synth.tfa_ocellus_p1_green_line_spawn_01", "synth.tfa_ocellus_p1_green_line_spawn_02")
         private val RESOLVE_SOUNDS =
-            listOf("synth.ocellus_tendril_resolve_01", "synth.ocellus_tendril_resolve_02")
+            listOf("synth.tfa_ocellus_p1_green_line_absorb_01", "synth.tfa_ocellus_p1_green_line_absorb_02")
     }
 }

@@ -95,7 +95,7 @@ internal class OcellusCurses(private val deps: BossDeps, private val npcList: Np
         private const val SOUL_SPLIT_END_HEIGHT = 190
         private const val SOUL_SPLIT_CYCLES = 60
         private const val SOUL_SPLIT_ANGLE = 5
-        private const val SOUL_SPLIT_SOUND = "synth.ocellus_soul_split_heal"
+        private const val SOUL_SPLIT_SOUND = "synth.nex2021_nex_heal"
         private const val SOUL_SPLIT_SOUND_RADIUS = 9
     }
 }

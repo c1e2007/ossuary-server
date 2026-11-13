@@ -513,9 +513,9 @@ internal class EzekielFight(
         const val FINALE_CAST_SPOT = "spotanim.vfx_ezekiel_finale_cast01"
         const val IMPACT_MEDIUM = "spotanim.vfx_ezekiel_finale_impact_medium01"
         const val IMPACT_SMALL = "spotanim.vfx_ezekiel_finale_impact_small01"
-        const val FENCE_SYNTH = "synth.tfa_ezekiel_fence_impact"
-        const val FINALE_CAST_SYNTH = "synth.tfa_ezekiel_finale_cast_sound"
-        const val FINALE_DROP_SYNTH = "synth.tfa_ezekiel_finale_drop"
+        const val FENCE_SYNTH = "synth.tfa_ezekiel_finale_central_thunder_01"
+        const val FINALE_CAST_SYNTH = "synth.tfa_ezekiel_finale_magic_blue_particle_spawn_01"
+        const val FINALE_DROP_SYNTH = "synth.tfa_ezekiel_finale_3_sword_drop_impact_02"
         const val TIMER_BAR = "headbar.tfa_ezekiel_sword_timer"
         const val CHARGE_BAR = "headbar.charge_70"
 
@@ -525,7 +525,7 @@ internal class EzekielFight(
         const val ARENA_ENTRY_DX = 4
         const val ARENA_ENTRY_DZ = -6
         const val SOUND_RADIUS = 25
-        const val VICTORY_SONG = 147
+        const val VICTORY_SONG = "midi.silence"
         const val VICTORY_FADE_OUT = 50
 
         const val FLY_TICKS = 14

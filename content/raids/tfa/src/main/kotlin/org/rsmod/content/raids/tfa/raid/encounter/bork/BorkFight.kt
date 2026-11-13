@@ -298,7 +298,7 @@ internal class BorkFight(
         const val BURN_HITS = 5
         const val BURN_PERIOD = 4
         const val BURN_LAST = 1
-        const val VICTORY_SONG = 147
+        const val VICTORY_SONG = "midi.silence"
         const val VICTORY_FADE_OUT = 50
 
         val EXTRA_BACK = Color(72, 24, 0)

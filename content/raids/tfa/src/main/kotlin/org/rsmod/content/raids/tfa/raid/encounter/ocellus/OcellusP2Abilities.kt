@@ -13,7 +13,7 @@ internal class OcellusP2Abilities {
             sequence(
                 wait(WALLS_SPAWN_AT),
                 external(OcellusPhaseTwo.WALLS_SPAWN),
-                toPlayers(soundTo("synth.ocellus_p2_walls_spawn")),
+                toPlayers(soundTo("synth.tfa_ocellus_p2_orange_circles_spawn_01")),
             ),
             sequence(wait(1), external(OcellusPhaseTwo.SET_LEVEL)),
             sequence(
@@ -89,8 +89,8 @@ internal class OcellusP2Abilities {
                 external(OcellusPhaseTwo.POOLS),
                 toPlayers(
                     sequence(
-                        soundTo("synth.ocellus_p2_pool_hit"),
-                        soundTo("synth.ocellus_p2_pool_echo", delay = POOL_ECHO_DELAY),
+                        soundTo("synth.tfa_ocellus_p2_purple_floor_circle_spawn_01"),
+                        soundTo("synth.tfa_ocellus_p2_purple_floor_circle_orbs_raise_01", delay = POOL_ECHO_DELAY),
                     )
                 ),
             ),
@@ -104,7 +104,7 @@ internal class OcellusP2Abilities {
             sequence(
                 wait(start + PORTALS_AT),
                 external(OcellusPhaseTwo.PORTALS_SPAWN),
-                toPlayers(soundTo("synth.ocellus_p2_portal_spawn")),
+                toPlayers(soundTo("synth.tfa_ocellus_p2_orange_portal_create_01")),
             ),
             sequence(
                 wait(start + PORTALS_AT + 1),
@@ -134,8 +134,8 @@ internal class OcellusP2Abilities {
     private fun telegraphSound(echoDelay: Int): Effect =
         toPlayers(
             sequence(
-                soundTo("synth.ocellus_p2_telegraph"),
-                soundTo("synth.ocellus_p2_telegraph_echo", delay = echoDelay),
+                soundTo("synth.tfa_ocellus_p2_orange_change_colour_01"),
+                soundTo("synth.tfa_ocellus_p2_swirly_pink_orbs_01", delay = echoDelay),
             )
         )
 
@@ -145,11 +145,11 @@ internal class OcellusP2Abilities {
         val vfx =
             sequence(
                 spotanim("spotanim.vfx_ocellus_p2_sword_discharge", delay = DISCHARGE_VFX_DELAY),
-                sound("synth.ocellus_sword_discharge_vfx", radius = DISCHARGE_VFX_RADIUS, at = OcellusArena.MIDDLE),
+                sound("synth.hal_sep_lightning_trap_1", radius = DISCHARGE_VFX_RADIUS, at = OcellusArena.MIDDLE),
             )
         val discharge =
             sequence(
-                sound("synth.ocellus_sword_discharge_hit", radius = DISCHARGE_HIT_RADIUS, at = OcellusArena.MIDDLE),
+                sound("synth.ghoul_hit", radius = DISCHARGE_HIT_RADIUS, at = OcellusArena.MIDDLE),
                 external(OcellusPhaseTwo.DISCHARGE),
             )
         return sequence(
@@ -163,7 +163,7 @@ internal class OcellusP2Abilities {
             discharge,
             wait(LAST_DISCHARGE_GAP),
             external(OcellusPhaseTwo.CLOSE),
-            sound("synth.ocellus_sword_discharge_vfx", radius = DISCHARGE_VFX_RADIUS, at = OcellusArena.MIDDLE),
+            sound("synth.hal_sep_lightning_trap_1", radius = DISCHARGE_VFX_RADIUS, at = OcellusArena.MIDDLE),
             wait(1),
             discharge,
         )

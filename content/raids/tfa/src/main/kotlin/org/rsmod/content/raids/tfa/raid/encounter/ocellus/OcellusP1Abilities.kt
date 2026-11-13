@@ -293,8 +293,8 @@ internal class OcellusP1Abilities {
             "spotanim.vfx_ocellus_water_attack01_spotanim",
             "spotanim.vfx_ocellus_water_attack01_projanim",
             "spotanim.vfx_ocellus_water_attack01_impactanim",
-            "synth.ocellus_water_attack_cast",
-            "synth.ocellus_water_attack_travel",
+            "synth.tfa_ocellus_p1_ranged_projectile_01",
+            "synth.tfa_ocellus_p1_ranged_projectile_launch_01",
             "synth.mark_of_darkness_hit",
         ),
         Ranged(
@@ -302,8 +302,8 @@ internal class OcellusP1Abilities {
             "spotanim.vfx_ocellus_fire_attack01_spotanim",
             "spotanim.vfx_ocellus_fire_attack01_projanim",
             "spotanim.vfx_ocellus_fire_attack01_impactanim",
-            "synth.ocellus_fire_attack_cast",
-            "synth.ocellus_fire_attack_travel",
+            "synth.tfa_ocellus_p1_magic_projectile_01",
+            "synth.tfa_ocellus_p1_magic_projectile_launch_01",
             "synth.leather_hit",
         );
 

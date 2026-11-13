@@ -58,7 +58,7 @@ constructor(deps: BossDeps, private val fights: DreadnothEncounter) : BossPlugin
                 sequence(
                     spawnLoc(DAMAGE_TILE, CurrentTile, randomAngle = true),
                     splat,
-                    sound("synth.tfa_dreadnoth_tile", radius = SOUND_RADIUS, at = CurrentTile),
+                    sound("synth.tfa_dreadnoth_red_floor_tile_impact_01", radius = SOUND_RADIUS, at = CurrentTile),
                 )
 
             val melee =
@@ -123,7 +123,7 @@ constructor(deps: BossDeps, private val fights: DreadnothEncounter) : BossPlugin
                         1,
                         sequence(
                             setVarn(SPAWN_BUDGET, perVolley),
-                            sound("synth.tfa_dreadnoth_slam", radius = SOUND_RADIUS, at = Centre),
+                            sound("synth.tfa_dreadnoth_blood_projectile_01", radius = SOUND_RADIUS, at = Centre),
                             onEach(
                                 playersIn(arena),
                                 hit {
@@ -181,13 +181,13 @@ constructor(deps: BossDeps, private val fights: DreadnothEncounter) : BossPlugin
                 sequence(
                     spawnLoc(DAMAGE_TILE, at, randomAngle = true),
                     mapSpotanim("spotanim.tob_bloat_blood_splat", at),
-                    sound("synth.tfa_dreadnoth_tile", radius = SOUND_RADIUS, at = at),
+                    sound("synth.tfa_dreadnoth_red_floor_tile_impact_01", radius = SOUND_RADIUS, at = at),
                 )
 
             ability(
                 "land",
                 sequence(
-                    sound("synth.tfa_dreadnoth_slam", radius = SOUND_RADIUS, at = Centre),
+                    sound("synth.tfa_dreadnoth_blood_projectile_01", radius = SOUND_RADIUS, at = Centre),
                     onEach(
                         playersIn(footprint),
                         hit {
@@ -216,7 +216,7 @@ constructor(deps: BossDeps, private val fights: DreadnothEncounter) : BossPlugin
                                 onImpact = placeAt(ImpactTile),
                                 impactLead = IMPACT_LEAD,
                             ),
-                            sound("synth.tfa_dreadnoth_spit", radius = SOUND_RADIUS, at = Centre),
+                            sound("synth.tfa_dreadnoth_blood_projectile_02", radius = SOUND_RADIUS, at = Centre),
                         ),
                     ),
                 ),

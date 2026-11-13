@@ -144,9 +144,9 @@ internal object EzekielArena {
 
     val FINALE_SWORDS =
         listOf(
-            FinaleSword(-2, -1, 3, "synth.tfa_ezekiel_sword_telegraph_3", -1),
-            FinaleSword(-1, -2, 1, "synth.tfa_ezekiel_sword_telegraph_1", -2),
-            FinaleSword(-2, -3, 4, "synth.tfa_ezekiel_sword_telegraph_4", -3),
+            FinaleSword(-2, -1, 3, "synth.tfa_ezekiel_finale_east", -1),
+            FinaleSword(-1, -2, 1, "synth.tfa_ezekiel_finale_north_01", -2),
+            FinaleSword(-2, -3, 4, "synth.tfa_ezekiel_finale_west", -3),
         )
 
     fun inArena(origin: CoordGrid, tile: CoordGrid): Boolean {

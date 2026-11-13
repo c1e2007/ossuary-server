@@ -113,10 +113,6 @@ ocellus_quadrant_destroy = 72
 ocellus_rift_charge = 75
 tfa_ezekiel_sword_timer = 87
 
-[gamevals.midi]
-tfa_ocellus_combat_part_01 = 893
-tfa_ocellus_combat_part_02 = 894
-
 [gamevals.clientscript]
 ocellus_proj_curve_height = 10024
 ocellus_proj_curve_angle = 10018
@@ -127,61 +123,6 @@ tfa_hud_names = 10042
 tfa_partydetails_addmember = 10053
 tfa_partydetails_master = 10060
 tfa_partylist_addline = 10094
-
-[gamevals.synth]
-leather_hit = 24
-mark_of_darkness_hit = 5041
-ocellus_tendril_resolve_01 = 12512
-ocellus_tendril_resolve_02 = 12513
-ocellus_tendril_charge_01 = 12514
-ocellus_tendril_charge_02 = 12515
-ocellus_fire_attack_cast = 12516
-ocellus_fire_attack_travel = 12518
-ocellus_water_attack_cast = 12519
-ocellus_water_attack_travel = 12520
-ancient_spell_activate = 6589
-ocellus_p2_walls_spawn = 12527
-ocellus_p2_telegraph = 12526
-ocellus_p2_telegraph_echo = 12531
-ocellus_p2_pool_hit = 12530
-ocellus_p2_pool_echo = 12529
-ocellus_p2_portal_spawn = 12528
-ocellus_sword_discharge_vfx = 4428
-ocellus_sword_discharge_hit = 444
-ocellus_magic_spread_cast = 12633
-ocellus_debris_fall = 12619
-ocellus_siphon_heal = 12543
-ocellus_soul_split_heal = 5281
-tfa_dreadnoth_slam = 12361
-tfa_dreadnoth_spit = 12362
-tfa_dreadnoth_tile = 12387
-tfa_bork_gong = 10051
-tfa_bork_start = 12769
-tfa_smork_napalm_cast = 12240
-tfa_smork_napalm_splash = 12239
-tfa_smork_ball_cast = 12248
-tfa_bork_daze_2 = 12273
-tfa_bork_daze_3 = 12758
-tfa_bork_daze_4 = 12249
-tfa_smork_voice_1 = 12747
-tfa_smork_voice_2 = 12748
-tfa_smork_voice_3 = 12750
-tfa_smork_voice_4 = 12751
-tfa_smork_voice_5 = 12752
-tfa_smork_voice_6 = 12753
-tfa_smork_voice_7 = 12754
-tfa_smork_voice_8 = 12755
-tfa_smork_voice_9 = 12756
-tfa_smork_last_line = 12761
-tfa_smork_tower_death = 12251
-tfa_ezekiel_special_cast = 12454
-tfa_ezekiel_star_burst = 12441
-tfa_ezekiel_fence_impact = 12407
-tfa_ezekiel_finale_cast_sound = 12416
-tfa_ezekiel_finale_drop = 12400
-tfa_ezekiel_sword_telegraph_1 = 12417
-tfa_ezekiel_sword_telegraph_3 = 12413
-tfa_ezekiel_sword_telegraph_4 = 12423
 
 [gamevals.area]
 tfa_lobby = 30020

@@ -200,7 +200,7 @@ internal class DreadnothFight(
         const val JELLY_HUNT_RANGE = 40
         val WAVE_PERCENTS = listOf(85, 65, 45)
         const val ENRAGE_PERCENT = 25
-        const val VICTORY_SONG = 147
+        const val VICTORY_SONG = "midi.silence"
         const val VICTORY_FADE_OUT = 50
     }
 }

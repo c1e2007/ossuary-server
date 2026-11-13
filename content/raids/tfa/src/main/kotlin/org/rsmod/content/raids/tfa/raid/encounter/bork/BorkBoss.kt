@@ -91,7 +91,7 @@ constructor(deps: BossDeps, private val fights: BorkEncounter) : BossPluginScrip
                 }
                 return sequence(
                     anim("seq.npc_bork_gong_melee01"),
-                    sound("synth.tfa_bork_gong", radius = SOUND_RADIUS),
+                    sound("synth.l5_combat_mastery_ui_sparks_silence_05", radius = SOUND_RADIUS),
                     onTiles(
                         customTiles(arena) { npc, _, _ -> BorkArena.gongTiles(npc, reach(npc)) },
                         dust(gongOrigin),
@@ -169,7 +169,7 @@ constructor(deps: BossDeps, private val fights: BorkEncounter) : BossPluginScrip
                         BorkArena.napalmSplash(npc.spawnCoords, at, random)
                     },
                     sequence(
-                        sound("synth.tfa_smork_napalm_splash", radius = SOUND_RADIUS, at = ImpactTile),
+                        sound("synth.tfa_smork_aoe_att_land_impact_01", radius = SOUND_RADIUS, at = ImpactTile),
                         asNpc(
                             bork,
                             whenever(
@@ -232,7 +232,7 @@ constructor(deps: BossDeps, private val fights: BorkEncounter) : BossPluginScrip
                             1,
                             sequence(
                                 anim("seq.npc_smork_cannon_attack01"),
-                                sound("synth.tfa_smork_napalm_cast", radius = SOUND_RADIUS),
+                                sound("synth.tfa_smork_big_cannon_att_aoe_projectile_01", radius = SOUND_RADIUS),
                                 mapSpotanim("spotanim.gargboss_debris_shadow_120", tile("napalm")),
                                 projectile(
                                     spotanim = "spotanim.vfx_smork_napalm_fire_projanim01",
@@ -274,7 +274,7 @@ constructor(deps: BossDeps, private val fights: BorkEncounter) : BossPluginScrip
                             sequence(
                                 faceTile(tile("ball"), instant = true),
                                 anim("seq.npc_smork_big_cannon_attack01"),
-                                sound("synth.tfa_smork_ball_cast", radius = SOUND_RADIUS, delay = BALL_SOUND_DELAY),
+                                sound("synth.tfa_smork_big_cannon_big_shot_projectile_01", radius = SOUND_RADIUS, delay = BALL_SOUND_DELAY),
                                 mapSpotanim("spotanim.gargboss_debris_shadow_150", tile("ball")),
                                 projectile(
                                     spotanim = "spotanim.cannonball_travel_big",
@@ -360,7 +360,7 @@ constructor(deps: BossDeps, private val fights: BorkEncounter) : BossPluginScrip
             fun wave(index: Int): Effect {
                 val foot = customTile { npc, _ -> BorkArena.foot(npc, npc.vars[STOMP_SIDE], index) }
                 return sequence(
-                    sound("synth.tfa_bork_gong", radius = SOUND_RADIUS),
+                    sound("synth.l5_combat_mastery_ui_sparks_silence_05", radius = SOUND_RADIUS),
                     onTiles(customTiles(arena) { npc, _, _ -> BorkArena.stompTiles(npc) }, dust(foot)),
                     onEach(
                         playersIn(arena),
@@ -432,7 +432,7 @@ constructor(deps: BossDeps, private val fights: BorkEncounter) : BossPluginScrip
                 "begin",
                 sequence(
                     song(MUSIC, arena),
-                    sound("synth.tfa_bork_start", radius = SOUND_RADIUS),
+                    sound("synth.tfa_bork_enraged_laughter_01", radius = SOUND_RADIUS),
                     setHp(varn(HP_MAX), varn(HP_MAX)),
                     asNpc(smork, setHp(varn(SMORK_MAX), varn(SMORK_MAX))),
                     setVarn(SMORK_PCT, 100),
@@ -519,7 +519,7 @@ constructor(deps: BossDeps, private val fights: BorkEncounter) : BossPluginScrip
                                     spotanim("spotanim.vfx_smork_tower_death_spotanim01"),
                                     spotanim("spotanim.vfx_smork_death_explosion_spotanim01", slot = 1),
                                     spotanim("spotanim.vfx_smork_goblins_death_spotanim01", slot = 2),
-                                    sound("synth.tfa_smork_tower_death", radius = SOUND_RADIUS),
+                                    sound("synth.tfa_smork_turret_explosion_01", radius = SOUND_RADIUS),
                                     transparency(0, SMORK_FADE_CYCLES, 0, TRANSPARENT),
                                 ),
                             ),
@@ -534,7 +534,7 @@ constructor(deps: BossDeps, private val fights: BorkEncounter) : BossPluginScrip
             fun arenaWave() =
                 sequence(
                     anim("seq.npc_bork_enraged_gong_attack01"),
-                    sound("synth.tfa_bork_gong", radius = SOUND_RADIUS),
+                    sound("synth.l5_combat_mastery_ui_sparks_silence_05", radius = SOUND_RADIUS),
                     onTiles(
                         customTiles(arena) { npc, _, _ -> BorkArena.arenaTiles(npc.spawnCoords) },
                         dust(gongOrigin),

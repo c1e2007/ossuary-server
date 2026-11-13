@@ -251,7 +251,7 @@ internal class OcellusRifts(private val deps: BossDeps) {
         private const val SIPHON_END_HEIGHT = 140
         private const val SIPHON_CYCLES = 30
         private const val SIPHON_ANGLE = 2
-        private const val SIPHON_SOUND = "synth.ocellus_siphon_heal"
+        private const val SIPHON_SOUND = "synth.tfa_ocellus_p3_self_heal_ocellus_01"
         private const val SIPHON_SOUND_RADIUS = 8
 
         private const val HITPOINTS = "stat.hitpoints"

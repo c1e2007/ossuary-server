@@ -298,7 +298,7 @@ internal class OcellusAttacks(private val deps: BossDeps, private val spin: Ocel
         sequence(
             anim(SPREAD_SEQ),
             spotanim(SPREAD_CAST_SPOT, delay = SPREAD_CAST_DELAY, slot = SPREAD_CAST_SLOT),
-            sound("synth.ocellus_magic_spread_cast", delay = SPREAD_SOUND_DELAY),
+            sound("synth.tfa_ocellus_unleash_phase3_black_projectile_01", delay = SPREAD_SOUND_DELAY),
             onEach(
                 playersIn(OcellusArena.FLOOR),
                 projectile(
@@ -442,7 +442,7 @@ internal class OcellusAttacks(private val deps: BossDeps, private val spin: Ocel
         const val PRAYER_LOOP_SPOT = "spotanim.vfx_ocellus_phase3_melee_prayer"
         const val PRAYER_OUT_SPOT = "spotanim.vfx_ocellus_phase3_melee_prayer_out"
         const val DEBRIS_SPOT = "spotanim.vfx_ocellus_falling_debris"
-        const val DEBRIS_SOUND = "synth.ocellus_debris_fall"
+        const val DEBRIS_SOUND = "synth.tfa_ocellus_rock_fall_02"
         const val DEBRIS_SOUND_RADIUS = 1
         const val UNTETHER_IN_SEQ = "seq.npc_ocellus_phase3_unleash_in"
         const val UNTETHER_LOOP_SEQ = "seq.npc_ocellus_phase3_unleash_loop"

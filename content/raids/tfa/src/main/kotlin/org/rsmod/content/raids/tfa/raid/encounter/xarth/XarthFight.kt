@@ -259,7 +259,7 @@ internal class XarthFight(
         const val FULL_PERCENT = 100
         const val ARENA_ENTRY_DX = -6
         const val ARENA_ENTRY_DZ = 1
-        const val VICTORY_SONG = 147
+        const val VICTORY_SONG = "midi.silence"
         const val VICTORY_FADE_OUT = 50
 
         val HEAP_LOCS =

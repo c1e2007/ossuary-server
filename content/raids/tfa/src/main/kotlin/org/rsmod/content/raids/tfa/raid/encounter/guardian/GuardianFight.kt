@@ -201,7 +201,7 @@ internal class GuardianFight(
         const val MAX_SCALING = 8
         const val BATTERY_SHIELD_PERCENT = 40
         const val IDLE_SPOT_INTERVAL = 3
-        const val VICTORY_SONG = 147
+        const val VICTORY_SONG = "midi.silence"
         const val VICTORY_SONG_TICKS = 18
         const val VICTORY_FADE_OUT = 50
         val ALLIANCE =

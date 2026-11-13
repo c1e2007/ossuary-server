@@ -232,7 +232,7 @@ internal class OcellusPhaseTwo(
 
         private const val PHASE_TWO_SONG = "midi.tfa_ocellus_combat_part_01"
         private const val PHASE_THREE_SONG = "midi.tfa_ocellus_combat_part_02"
-        private const val VICTORY_SONG = "midi.stop_music"
+        private const val VICTORY_SONG = "midi.silence"
         private const val SONG_FADE_SPEED = 60
 
         private const val PHASE_TWO_TRANSFORM_LEVEL = 1424

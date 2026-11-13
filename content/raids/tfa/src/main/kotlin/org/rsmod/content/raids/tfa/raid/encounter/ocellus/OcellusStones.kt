@@ -114,6 +114,6 @@ class OcellusStones @Inject constructor(private val encounter: OcellusEncounter)
         const val HOP_TICKS = 1
         const val HOP_CYCLES = 27
 
-        const val JUMP_SOUND = "synth.varrock_fence_jump"
+        const val JUMP_SOUND = "synth.jump"
     }
 }
