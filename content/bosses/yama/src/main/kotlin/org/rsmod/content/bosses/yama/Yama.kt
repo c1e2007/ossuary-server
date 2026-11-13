@@ -1,4 +1,4 @@
-package org.rsmod.content.bosses.yama
+﻿package org.rsmod.content.bosses.yama
 
 import dev.openrune.ServerCacheManager
 import dev.openrune.rscm.RSCM.asRSCM
@@ -17,7 +17,7 @@ import org.rsmod.api.death.NpcDeath
 import org.rsmod.api.instances.InstanceManager
 import org.rsmod.api.instances.InstanceSession
 import org.rsmod.api.npc.apPlayer2
-import org.rsmod.api.player.midiSong
+import org.rsmod.api.player.midiSongId
 import org.rsmod.api.player.output.mes
 import org.rsmod.api.player.stat.hitpoints
 import org.rsmod.api.player.stat.statBase
@@ -81,7 +81,7 @@ internal class YamaFights @Inject constructor(private val env: YamaEnv) {
         throne?.let { fight.pin(it) }
         player.yamaThroneState = 0
         player.yamaMultiway = 1
-        player.midiSong(YamaCommon.MUSIC_TRACK)
+        player.midiSongId(YamaCommon.MUSIC_TRACK)
         fight.runLoop()
     }
 
