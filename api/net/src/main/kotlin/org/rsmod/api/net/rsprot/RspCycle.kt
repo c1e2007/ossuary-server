@@ -24,6 +24,7 @@ import org.rsmod.api.player.righthand
 import org.rsmod.api.registry.region.RegionRegistry
 import org.rsmod.game.client.ClientCycle
 import org.rsmod.game.entity.Player
+import org.rsmod.game.entity.player.WornObjCustomisation
 import org.rsmod.game.entity.util.EntityFaceAngle
 import org.rsmod.game.headbar.Headbar
 import org.rsmod.game.hit.Hitmark
@@ -59,13 +60,15 @@ class RspCycle(
 
     private var knownNpcViewDistance: Int? = null
 
+    private val knownWornObjCustomisations = mutableMapOf<Wearpos, WornObjCustomisation>()
+
     private val playerInfo
         get() = infos.playerInfo
 
     private val playerExtendedInfo: PlayerAvatarExtendedInfo
         get() = playerInfo.avatar.extendedInfo
 
-    private val worldId: Int
+    private val worldArea: Int
         get() = -1
 
     fun init(player: Player) {
@@ -81,7 +84,7 @@ class RspCycle(
     }
 
     private fun Player.queueRebuildLogin() {
-        val rebuild = RebuildLoginV2(x shr 3, z shr 3, worldId, playerInfo)
+        val rebuild = RebuildLoginV2(x shr 3, z shr 3, worldArea, playerInfo)
         session?.queue(rebuild)
     }
 
@@ -98,6 +101,7 @@ class RspCycle(
         player.applySpotanims()
         player.applySay()
         player.applyTinting()
+        player.applyVisualEffects()
         player.applyHeadbars()
         player.applyHitmarks()
         player.syncAppearance()
@@ -222,7 +226,7 @@ class RspCycle(
         }
 
         if (regionUid == null) {
-            val rebuild = RebuildNormalV2(x shr 3, z shr 3, worldId)
+            val rebuild = RebuildNormalV2(x shr 3, z shr 3, worldArea)
             knownBuildArea = buildArea
             knownRegionUid = null
             cachedRegionZoneProvider = null
@@ -325,14 +329,32 @@ class RspCycle(
             return
         }
         for (packed in pendingSpotanims.longIterator()) {
-            val (id, delay, height, slot) = EntitySpotanim(packed)
-            playerExtendedInfo.setSpotAnim(slot, id, delay, height)
+            val spotanim = EntitySpotanim(packed)
+            playerExtendedInfo.setSpotAnim(
+                spotanim.slot,
+                spotanim.id,
+                spotanim.delay,
+                spotanim.height,
+                spotanim.loop,
+            )
         }
     }
 
     private fun Player.applySay() {
         val text = pendingSay ?: return
         playerExtendedInfo.setSay(text)
+    }
+
+    private fun Player.applyVisualEffects() {
+        pendingTransparency?.let { effect ->
+            playerExtendedInfo.setTransparency(
+                effect.startTime, effect.endTime, effect.startTransparency, effect.endTransparency,
+                effect.useStartTransparency,
+            )
+        }
+        pendingAnimationFreeze?.let { effect ->
+            playerExtendedInfo.setFreeze(effect.delay, effect.duration, effect.cancelSequence)
+        }
     }
 
     private fun Player.applyTinting() {
@@ -480,8 +502,22 @@ class RspCycle(
             runAnim = runningAnim,
         )
 
+        info.setForceModelRefresh(false)
         for (wearpos in Wearpos.visibleWearpos) {
             val obj = worn[wearpos.slot]
+            val customisation = appearance.wornObjCustomisation(wearpos, obj?.id)
+            if (customisation != knownWornObjCustomisations[wearpos]) {
+                if (customisation == null) {
+                    knownWornObjCustomisations.remove(wearpos)
+                    info.resetObjTypeCustomisation(wearpos.slot)
+                } else {
+                    knownWornObjCustomisations[wearpos] = customisation
+                    info.setObjRecolours(wearpos.slot, customisation.recolours)
+                    info.setObjRetextures(wearpos.slot, customisation.retextures)
+                    info.setObjRecolAll(wearpos.slot, customisation.colour)
+                }
+                info.setForceModelRefresh(true)
+            }
             if (obj == null) {
                 info.setWornObj(wearpos.slot, -1, -1, -1)
                 continue
