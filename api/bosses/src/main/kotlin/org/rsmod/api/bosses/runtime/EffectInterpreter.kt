@@ -23,6 +23,7 @@ import org.rsmod.api.npc.apPlayer2
 import org.rsmod.api.npc.heal
 import org.rsmod.api.npc.isValidTarget
 import org.rsmod.api.player.disableOverheadPrayers
+import org.rsmod.api.player.midiSongId
 import org.rsmod.api.player.disablePrayers
 import org.rsmod.api.player.hit.modifier.NoopPlayerHitModifier
 import org.rsmod.api.player.hit.modifier.PlayerHitModifier
@@ -390,7 +391,7 @@ class EffectInterpreter internal constructor(
             is Effect.Song -> {
                 val box = resolveArea(effect.area)
                 for (p in deps.playerList) {
-                    if (p.isValidTarget() && box.contains(p.coords)) p.midiSong(effect.id)
+                    if (p.isValidTarget() && box.contains(p.coords)) p.midiSongId(effect.id)
                 }
             }
             is Effect.ExactMove -> {
