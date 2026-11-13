@@ -334,7 +334,7 @@ constructor(
         }
         when {
             mistake -> player.soundSynth(MISTAKE_SYNTH)
-            !bonus -> player.soundSynth(RSCM.getReverseMapping(RSCMType.SYNTH,tool.row.synth))
+            !bonus -> player.soundSynth(RSCM.getReverseMapping(RSCMType.SYNTH, tool.row.synth))
         }
         if (armed) {
             player.showSweetSpot(SWEETSPOT_NONE)

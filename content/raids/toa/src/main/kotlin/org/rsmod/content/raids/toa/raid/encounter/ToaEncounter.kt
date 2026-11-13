@@ -421,6 +421,7 @@ open class ToaEncounter(
         const val PATH_LEVELS_PER_TIER = 2
         const val HONEY_LOCUSTS_MIN = 4
         const val HONEY_LOCUSTS_MAX = 6
+
         // const val PUZZLE_JINGLE = "jingle.soundscape"
         const val STOP_MUSIC = "midi.silence"
 

@@ -2,9 +2,9 @@ package org.rsmod.content.skills.smithing
 
 import org.rsmod.api.player.events.interact.HeldUEvents
 import org.rsmod.api.player.protect.ProtectedAccess
-import org.rsmod.content.skills.smithing.util.SmithingUtils.hasHammer
 import org.rsmod.api.script.onOpHeldU
 import org.rsmod.api.script.onOpLocCategoryU
+import org.rsmod.content.skills.smithing.util.SmithingUtils.hasHammer
 import org.rsmod.plugin.scripts.PluginScript
 import org.rsmod.plugin.scripts.ScriptContext
 
@@ -154,5 +154,4 @@ class GodSwordScript : PluginScript() {
 
         return null
     }
-
 }

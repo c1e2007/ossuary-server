@@ -23,7 +23,6 @@ import org.rsmod.api.npc.apPlayer2
 import org.rsmod.api.npc.heal
 import org.rsmod.api.npc.isValidTarget
 import org.rsmod.api.player.disableOverheadPrayers
-import org.rsmod.api.player.midiSongId
 import org.rsmod.api.player.disablePrayers
 import org.rsmod.api.player.hit.modifier.NoopPlayerHitModifier
 import org.rsmod.api.player.hit.modifier.PlayerHitModifier
@@ -31,7 +30,7 @@ import org.rsmod.api.player.hit.modify
 import org.rsmod.api.player.hit.queueHit
 import org.rsmod.api.player.hit.queueImpactHit
 import org.rsmod.api.player.isValidTarget
-import org.rsmod.api.player.midiSong
+import org.rsmod.api.player.midiSongId
 import org.rsmod.api.player.output.Camera
 import org.rsmod.api.player.output.mes
 import org.rsmod.api.player.output.soundSynth
