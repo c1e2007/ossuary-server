@@ -1,5 +1,8 @@
 package org.rsmod.content.minigames.colosseum
 
+import dev.openrune.ServerCacheManager
+import dev.openrune.rscm.RSCM.asRSCM
+import dev.openrune.rscm.RSCMType
 import jakarta.inject.Inject
 import org.rsmod.api.bosses.dsl.*
 import org.rsmod.api.bosses.runtime.BossCombat
@@ -14,10 +17,19 @@ internal class ColosseumEnemies @Inject constructor(private val deps: BossDeps) 
     override fun ScriptContext.startup() {
         for (spec in specs) {
             BossCombat.register(this, spec, deps)
+            // The engine ends an npc's interaction when its target is farther than the cache
+            // type's maxRange + attackRange (7 + 1 by default) from the npc's spawn tile, whatever
+            // apRangeOverride says. Wave npcs spawn around the arena rim, so without this they
+            // dropped their target once the player was more than a few tiles away. The arena is
+            // about 30 tiles across, so one maxRange covers all of it.
+            for (type in spec.npcTypes) {
+                ServerCacheManager.getNpc(type.asRSCM(RSCMType.NPC))?.maxRange = ARENA_MAX_RANGE
+            }
         }
     }
 
     private companion object {
+        const val ARENA_MAX_RANGE = 40
         const val SPEED_TRIO = 6
         const val SPEED_FAST = 5
 
