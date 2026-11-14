@@ -1,8 +1,6 @@
 package org.rsmod.content.other.special.weapons
 
 import org.rsmod.api.weapons.WeaponMap
-import org.rsmod.content.other.special.weapons.magic.TridentOfTheSeasWeapons
-import org.rsmod.content.other.special.weapons.magic.TridentOfTheSwampWeapons
 import org.rsmod.content.other.special.weapons.magic.BoneStaffWeapons
 import org.rsmod.content.other.special.weapons.magic.PoweredStaffWeapons
 import org.rsmod.content.other.special.weapons.magic.RevenantSceptreWeapons
@@ -13,8 +11,6 @@ import org.rsmod.plugin.module.PluginModule
 class MagicWeaponsModule : PluginModule() {
     override fun bind() {
         addSetBinding<WeaponMap>(TumekensShadowWeapons::class.java)
-        addSetBinding<WeaponMap>(TridentOfTheSeasWeapons::class.java)
-        addSetBinding<WeaponMap>(TridentOfTheSwampWeapons::class.java)
         addSetBinding<WeaponMap>(PoweredStaffWeapons::class.java)
         addSetBinding<WeaponMap>(RevenantSceptreWeapons::class.java)
         addSetBinding<WeaponMap>(BoneStaffWeapons::class.java)
