@@ -1,0 +1,146 @@
+name: Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: unit and integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      # Same game-data cache as the nightly build (keyed on the revision in game.example.yml).
+      - name: Cache game data
+        id: gamecache
+        uses: actions/cache@v6
+        with:
+          path: |
+            .data/cache
+            .data/xteas.json
+            .data/gamevals-binary/gamevals.dat
+            .data/gamevals-binary/gamevals_generated.dat
+          key: game-cache-v2-${{ hashFiles('game.example.yml') }}
+
+      # api/generated/src is gitignored and produced by the cache pipeline, so a clean checkout does
+      # not compile until these tasks run.
+      - name: Generate cache and gameval sources
+        if: steps.gamecache.outputs.cache-hit != 'true'
+        run: ./gradlew :or-cache:freshCache :or-cache:mergePluginGamevals
+
+      - name: Rebuild sources from cached game data
+        if: steps.gamecache.outputs.cache-hit == 'true'
+        run: ./gradlew :or-cache:buildCache :or-cache:mergePluginGamevals
+
+      - name: Create game config and RSA keys
+        run: |
+          [ -f game.yml ] || cp game.example.yml game.yml
+          ./gradlew generateRsa
+
+      # --continue runs every module's tests even when one fails, so the report below covers the whole
+      # suite. The step is allowed to fail so the summary and artifacts are always produced; the final
+      # step turns the job red if anything failed.
+      - name: Run tests
+        id: run_tests
+        continue-on-error: true
+        run: ./gradlew test integration --continue
+
+      - name: Summarise results
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob, os, re, xml.etree.ElementTree as ET
+
+          totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+          failed = {}
+          per_module = {}
+          for path in glob.glob("**/build/test-results/**/*.xml", recursive=True):
+              module = path.split("/build/test-results/")[0]
+              try:
+                  suite = ET.parse(path).getroot()
+              except ET.ParseError:
+                  continue
+              suites = [suite] if suite.tag == "testsuite" else suite.findall("testsuite")
+              for s in suites:
+                  t = int(s.get("tests", 0)); f = int(s.get("failures", 0))
+                  e = int(s.get("errors", 0)); k = int(s.get("skipped", 0))
+                  totals["tests"] += t; totals["failures"] += f
+                  totals["errors"] += e; totals["skipped"] += k
+                  m = per_module.setdefault(module, [0, 0, 0, 0])
+                  m[0] += t; m[1] += f + e; m[2] += k
+                  for case in s.findall("testcase"):
+                      bad = case.find("failure")
+                      bad = bad if bad is not None else case.find("error")
+                      if bad is not None:
+                          msg = (bad.get("message") or bad.text or "").strip().splitlines()
+                          failed.setdefault(module, []).append(
+                              (case.get("classname", "?") + "." + case.get("name", "?"),
+                               (msg[0] if msg else "")[:200]))
+                  m[3] += 1
+
+          bad_total = totals["failures"] + totals["errors"]
+          passed = totals["tests"] - bad_total - totals["skipped"]
+          lines = [
+              "## Test results",
+              "",
+              f"- total: **{totals['tests']}**",
+              f"- passed: **{passed}**",
+              f"- failed: **{bad_total}**",
+              f"- skipped: **{totals['skipped']}**",
+              f"- modules with results: {len(per_module)}",
+              "",
+          ]
+          if failed:
+              lines.append("### Failures by module")
+              for module in sorted(failed):
+                  lines.append(f"\n**{module}** ({len(failed[module])})")
+                  for name, msg in failed[module]:
+                      lines.append(f"- `{name}`: {msg}")
+          out = "\n".join(lines)
+          print(out)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as fh:
+              fh.write(out + "\n")
+          with open("test-summary.md", "w") as fh:
+              fh.write(out + "\n")
+          PY
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: |
+            test-summary.md
+            **/build/test-results/**/*.xml
+            **/build/reports/tests/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Fail the job if tests failed
+        if: steps.run_tests.outcome == 'failure'
+        run: |
+          echo "One or more tests failed; see the summary above."
+          exit 1
