@@ -553,7 +553,6 @@ class EffectInterpreter internal constructor(
         val delay = hit.delay.coerceAtLeast(1)
         for (t in targets) {
             val damage = rollDamage(hit, t)
-            org.rsmod.game.debug.AkkhaTrace.hit(npc, t.coords, damage) // TEMP-AKKHA-TRACE
             if (damage > 0) {
                 hit.spotanim?.let {
                     t.spotanim(it, delay = hit.spotanimDelay ?: 0, height = hit.spotanimHeight, slot = hit.spotanimSlot)

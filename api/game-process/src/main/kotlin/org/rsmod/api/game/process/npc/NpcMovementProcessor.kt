@@ -86,7 +86,6 @@ constructor(
             }
 
             val step = stepFactory.validated(this, current, target, collision)
-            org.rsmod.game.debug.AkkhaTrace.step(this, current, step, this@NpcMovementProcessor.collision) // TEMP-AKKHA-TRACE
             if (step == CoordGrid.NULL) {
                 break
             }

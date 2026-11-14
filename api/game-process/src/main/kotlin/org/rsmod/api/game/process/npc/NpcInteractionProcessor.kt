@@ -81,7 +81,6 @@ constructor(
             if (isTargetBusy) {
                 return
             }
-            org.rsmod.game.debug.AkkhaTrace.phase(npc, "under-target", "stepAway") // TEMP-AKKHA-TRACE
             npc.stepAwayFromTarget()
             movement.process(npc)
             return
@@ -129,7 +128,6 @@ constructor(
 
             val step = determinePreMovementStep(this)
             processInteractionStep(interaction, step)
-            org.rsmod.game.debug.AkkhaTrace.phase(this@preMovementInteraction, "pre", "step=$step fired=$interacted") // TEMP-AKKHA-TRACE
         }
 
     private fun Npc.postMovementInteraction(interaction: Interaction): Unit =
@@ -139,12 +137,10 @@ constructor(
             // Ranged/magic npcs (larger ap range) keep attacking while they reposition, and
             // `hasMovedThisCycle` is only set by a real step, so a stationary npc is unaffected.
             if (hasMovedThisCycle && isPathingTarget(this) && apRange <= MELEE_AP_RANGE) {
-                org.rsmod.game.debug.AkkhaTrace.phase(this@postMovementInteraction, "post", "SKIPPED (moved this tick)") // TEMP-AKKHA-TRACE
                 return@with
             }
             val step = determinePostMovementStep(this)
             processInteractionStep(this, step)
-            org.rsmod.game.debug.AkkhaTrace.phase(this@postMovementInteraction, "post", "step=$step fired=$interacted") // TEMP-AKKHA-TRACE
         }
 
     private fun isPathingTarget(interaction: Interaction): Boolean =
