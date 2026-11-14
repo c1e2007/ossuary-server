@@ -19,6 +19,7 @@ import org.rsmod.api.script.onOpContentNpc4
 import org.rsmod.api.script.onOpContentNpcU
 import org.rsmod.api.utils.format.formatAmount
 import org.rsmod.content.interfaces.bank.confirmAndExchangeBanknote
+import org.rsmod.content.interfaces.bank.openCollectionBox
 import org.rsmod.content.interfaces.bank.scripts.BankTutorialScript
 import org.rsmod.content.interfaces.bank.tryOpenBank
 import org.rsmod.game.entity.Npc
@@ -209,10 +210,6 @@ private constructor(
 
     private fun ProtectedAccess.openPin() {
         ifOpenMainModal("interface.bankpin_settings")
-    }
-
-    private fun ProtectedAccess.openCollectionBox() {
-        ifOpenMainModal("interface.ge_collect")
     }
 
     private suspend fun Dialogue.buyBankSlots() {

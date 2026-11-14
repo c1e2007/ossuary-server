@@ -3,6 +3,7 @@ package org.rsmod.content.other.special.attacks
 import org.rsmod.api.specials.SpecialAttackMap
 import org.rsmod.content.other.special.attacks.boost.StatBoostSpecialAttacks
 import org.rsmod.content.other.special.attacks.melee.DragonClawsSpecialAttack
+import org.rsmod.content.other.special.attacks.magic.PoweredStaffSpecialAttacks
 import org.rsmod.content.other.special.attacks.melee.DragonLongswordSpecialAttack
 import org.rsmod.content.other.special.attacks.melee.HalberdSpecialAttack
 import org.rsmod.content.other.special.attacks.melee.PowerMeleeSpecialAttacks
@@ -21,5 +22,6 @@ class SpecialAttackModule : PluginModule() {
         addSetBinding<SpecialAttackMap>(PowerMeleeSpecialAttacks::class.java)
         addSetBinding<SpecialAttackMap>(ZaryteCrossbowSpecialAttack::class.java)
         addSetBinding<SpecialAttackMap>(ToxicBlowpipeSpecialAttack::class.java)
+        addSetBinding<SpecialAttackMap>(PoweredStaffSpecialAttacks::class.java)
     }
 }

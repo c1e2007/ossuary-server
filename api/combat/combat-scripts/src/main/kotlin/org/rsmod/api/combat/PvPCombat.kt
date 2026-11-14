@@ -46,6 +46,7 @@ constructor(
     private val spellsReg: SpellAttackRegistry,
     private val skullHooks: Set<PvPSkullHook>,
     private val specialAttackHooks: Set<PvPSpecialAttackHook>,
+    private val pjTimer: WildernessPjTimer,
 ) {
     suspend fun attack(access: ProtectedAccess, target: Player, attack: CombatAttack.PlayerAttack) {
         when (attack) {
@@ -60,6 +61,7 @@ constructor(
         for (hook in skullHooks) {
             hook.onPlayerAttack(player, target)
         }
+        pjTimer.recordAttack(player, target)
         setPkVars(target)
     }
 

@@ -459,3 +459,9 @@ id = "varn.ezekiel_dead"
 
 [[varn]]
 id = "varn.ezekiel_done"
+
+[[varn]]
+id = "varn.magic_defence_drain"
+
+[[varn]]
+id = "varn.venom_strikes"
